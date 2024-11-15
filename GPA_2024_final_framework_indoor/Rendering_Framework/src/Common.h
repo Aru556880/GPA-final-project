@@ -27,6 +27,17 @@ typedef struct _texture_data
     unsigned char* data;
 } texture_data;
 
+struct Material
+{
+    GLuint diffuse_tex;
+    bool useTextrue;
+    vec3 Ka;
+    vec3 Kd;
+    vec3 Ks;
+    float shineness;
+
+};
+
 struct Shape
 {
     GLuint vao;
@@ -35,13 +46,7 @@ struct Shape
     GLuint vbo_texcoord;
     GLuint ibo;
     int drawCount;
-    int materialID;
-};
-
-
-struct Material
-{
-    GLuint diffuse_tex;
+    Material material;
 };
 
 

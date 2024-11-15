@@ -32,7 +32,6 @@ public:
 	GLuint m_terrainVToUVMatHandle;
 
 
-
 	GLuint m_albedoMapHandle;
 	GLuint m_normalMapHandle;
 	GLuint m_elevationMapHandle;
@@ -54,5 +53,9 @@ public:
 	
 	int m_fs_pureColor;	
 	int m_fs_terrainPass;
+	int m_fs_diffuseAlbedo;
+	int m_fs_useTexture;
+
+	int m_test_meshcount = 0;
 };
 

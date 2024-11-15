@@ -3,8 +3,6 @@
 #include <vector>
 #include "Shader.h"
 #include "SceneManager.h"
-#include "DynamicSceneObject.h"
-#include "terrain\TerrainSceneObject.h"
 #include "indoorscene\IndoorSceneObject.h"
 
 
@@ -21,8 +19,6 @@ private:
 	int m_frameWidth;
 	int m_frameHeight;	
 
-	std::vector<DynamicSceneObject*> m_dynamicSOs;
-	TerrainSceneObject* m_terrainSO = nullptr;
 	IndoorSceneObject* m_indoorSO = nullptr;
 
 public:
@@ -32,8 +28,6 @@ public:
 	void setProjection(const glm::mat4 &proj);
 	void setView(const glm::mat4 &view);
 	void setViewport(const int x, const int y, const int w, const int h);
-	void appendDynamicSceneObject(DynamicSceneObject *obj);
-	void appendTerrainSceneObject(TerrainSceneObject* tSO);
 	void appendIndoorSceneObject(IndoorSceneObject* indoorSO);
 
 // pipeline

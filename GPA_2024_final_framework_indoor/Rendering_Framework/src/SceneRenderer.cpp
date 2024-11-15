@@ -19,18 +19,6 @@ void SceneRenderer::renderPass(){
 	glUniformMatrix4fv(manager->m_projMatHandle, 1, false, glm::value_ptr(this->m_projMat));
 	glUniformMatrix4fv(manager->m_viewMatHandle, 1, false, glm::value_ptr(this->m_viewMat));
 
-	/*
-	if (this->m_terrainSO != nullptr) {
-		glUniform1i(SceneManager::Instance()->m_vs_vertexProcessIdHandle, SceneManager::Instance()->m_vs_terrainProcess);
-		this->m_terrainSO->update();
-	}
-
-	if (this->m_dynamicSOs.size() > 0) {
-		glUniform1i(SceneManager::Instance()->m_vs_vertexProcessIdHandle, SceneManager::Instance()->m_vs_commonProcess);
-		for (DynamicSceneObject *obj : this->m_dynamicSOs) {
-			obj->update();
-		}
-	}*/
 	if (this->m_indoorSO != nullptr) {
 		glUniform1i(SceneManager::Instance()->m_vs_vertexProcessIdHandle, SceneManager::Instance()->m_vs_commonProcess);
 		this->m_indoorSO->update();
@@ -65,12 +53,7 @@ void SceneRenderer::setView(const glm::mat4 &view){
 void SceneRenderer::setViewport(const int x, const int y, const int w, const int h) {
 	glViewport(x, y, w, h);
 }
-void SceneRenderer::appendDynamicSceneObject(DynamicSceneObject *obj){
-	this->m_dynamicSOs.push_back(obj);
-}
-void SceneRenderer::appendTerrainSceneObject(TerrainSceneObject* tSO) {
-	this->m_terrainSO = tSO;
-}
+
 void SceneRenderer::appendIndoorSceneObject(IndoorSceneObject* indoorSO) {
 	this->m_indoorSO = indoorSO;
 }
@@ -125,6 +108,8 @@ bool SceneRenderer::setUpShader(){
 	manager->m_fs_pixelProcessIdHandle = 2;
 	manager->m_fs_pureColor = 5;
 	manager->m_fs_terrainPass = 7;
+	manager->m_fs_diffuseAlbedo = 15;
+	manager->m_fs_useTexture = 16;
 	
 	return true;
 }

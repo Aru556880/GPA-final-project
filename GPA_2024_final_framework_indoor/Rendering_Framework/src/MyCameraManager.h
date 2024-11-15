@@ -28,14 +28,8 @@ public:
 	void keyPress(const RenderWidgetKeyCode key) ;
 	void keyRelease(const RenderWidgetKeyCode key) ;
 
-	void teleport(const int idx);
-
 public:
-	void updateGodCamera();
 	void updatePlayerCamera();
-	void updateAirplane();
-	void adjustAirplaneHeight(const float terrainHeight);
-	void adjustPlayerCameraHeight(const float terrainHeight);
 
 private:
 	
@@ -47,14 +41,8 @@ public:
 	glm::vec3 playerViewOrig() const;
 	glm::vec3 playerCameraLookCenter() const;
 
-	glm::mat4 godViewMatrix() const;
-	glm::mat4 godProjectionMatrix() const;
-
-	glm::mat4 airplaneModelMatrix() const;
-	glm::vec3 airplanePosition() const;
 
 	glm::ivec4 playerViewport() const;
-	glm::ivec4 godViewport() const;
 
 	float playerCameraNear() const;
 	float playerCameraFar() const;
@@ -67,10 +55,7 @@ private:
 	glm::mat4 m_airplaneModelMat;
 
 	MyCamera* m_playerMyCamera = nullptr;
-	MyCamera* m_godMyCamera = nullptr;
-	MyOrbitControl* m_godCameraControl = nullptr;
 
-	glm::mat4 m_godProjMat;
 	glm::mat4 m_playerProjMat;
 
 	float m_playerCameraHeightOffset = 0.0;
@@ -79,7 +64,6 @@ private:
 	const float MIN_PLAYER_CAMERA_TERRAIN_OFFSET;
 	const float MIN_AIRPLANE_TERRAIN_OFFSET;
 
-	glm::ivec4 m_godViewport;
 	glm::ivec4 m_playerViewport;
 
 private:
