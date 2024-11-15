@@ -19,12 +19,6 @@
     <Filter Include="Source Files\imgui">
       <UniqueIdentifier>{d7f4af42-da57-402b-b1e7-fd31dce3ab29}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\terrain">
-      <UniqueIdentifier>{aa75d1a0-e69a-4c3b-975a-9126bd852e13}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\terrain">
-      <UniqueIdentifier>{e8de22a5-99e5-4753-badb-93c11e1384c6}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\camera">
       <UniqueIdentifier>{967e7342-58af-4a07-801b-5faa0dfa2877}</UniqueIdentifier>
     </Filter>
@@ -63,23 +57,11 @@
     <ClCompile Include="src\MyImGuiPanel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\ViewFrustumSceneObject.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\DynamicSceneObject.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\SceneRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Shader.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\terrain\TerrainSceneObject.cpp">
-      <Filter>Source Files\terrain</Filter>
-    </ClCompile>
-    <ClCompile Include="src\terrain\MyTerrain.cpp">
-      <Filter>Source Files\terrain</Filter>
     </ClCompile>
     <ClCompile Include="src\camera\MyCamera.cpp">
       <Filter>Source Files\camera</Filter>
@@ -125,15 +107,6 @@
     <ClInclude Include="src\MyImGuiPanel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\ViewFrustumSceneObject.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\MyPoissonSample.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\DynamicSceneObject.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\SceneManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -142,18 +115,6 @@
     </ClInclude>
     <ClInclude Include="src\Shader.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\terrain\MyTerrain.h">
-      <Filter>Header Files\terrain</Filter>
-    </ClInclude>
-    <ClInclude Include="src\terrain\MyTerrainData.h">
-      <Filter>Header Files\terrain</Filter>
-    </ClInclude>
-    <ClInclude Include="src\terrain\MyViewFrustum.h">
-      <Filter>Header Files\terrain</Filter>
-    </ClInclude>
-    <ClInclude Include="src\terrain\TerrainSceneObject.h">
-      <Filter>Header Files\terrain</Filter>
     </ClInclude>
     <ClInclude Include="src\MyCameraManager.h">
       <Filter>Header Files\camera</Filter>

@@ -71,6 +71,7 @@ void MyCameraManager::keyPress(const RenderWidgetKeyCode key) {
 	}	
 	else if (key == RenderWidgetKeyCode::KEY_T) {
 		SceneManager::Instance()->m_test_meshcount += 1;
+		cout << "test" << SceneManager::Instance()->m_test_meshcount << endl;
 	}
 }
 void MyCameraManager::keyRelease(const RenderWidgetKeyCode key) {

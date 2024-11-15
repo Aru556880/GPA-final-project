@@ -29,35 +29,10 @@ void commonProcess(){
 	gl_Position = projMat * viewVertex ;
 }
 
-void terrainProcess(){
-	vec4 worldV = modelMat * vec4(v_vertex, 1.0) ;
-	// calculate uv
-	vec4 uv = terrainVToUVMat * worldV ;
-	uv.y = uv.z ;
-	// get height from map
-	float h = texture(elevationMap, uv.xy).r ;
-	worldV.y = h;		
-	// get normal from map
-	vec4 normalTex = texture(normalMap, uv.xy) ;
-	// [0, 1] -> [-1, 1]
-	normalTex = normalTex * 2.0 - 1.0 ;
-		
-	// transformation	
-	vec4 viewVertex = viewMat * worldV ;
-	vec4 viewNormal = viewMat * vec4(normalTex.rgb, 0) ;	
-	
-	f_viewVertex = viewVertex.xyz;
-	f_uv = uv.xyz ;
-
-	gl_Position = projMat * viewVertex ;
-}
 
 void main(){
 	if(vertexProcessIdx == 0){
 		commonProcess() ;
-	}
-	else if(vertexProcessIdx == 3){
-		terrainProcess() ;
 	}
 	else{
 		commonProcess() ;

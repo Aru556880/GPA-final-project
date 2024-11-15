@@ -29,16 +29,12 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="src\camera\MyCamera.cpp" />
     <ClCompile Include="src\camera\MyOrbitControl.cpp" />
-    <ClCompile Include="src\DynamicSceneObject.cpp" />
     <ClCompile Include="src\glad.c" />
     <ClCompile Include="src\indoorscene\IndoorSceneObject.cpp" />
     <ClCompile Include="src\MyCameraManager.cpp" />
     <ClCompile Include="src\MyImGuiPanel.cpp" />
     <ClCompile Include="src\SceneRenderer.cpp" />
     <ClCompile Include="src\Shader.cpp" />
-    <ClCompile Include="src\terrain\MyTerrain.cpp" />
-    <ClCompile Include="src\terrain\TerrainSceneObject.cpp" />
-    <ClCompile Include="src\ViewFrustumSceneObject.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\externals\include\imgui\imconfig.h" />
@@ -53,19 +49,12 @@
     <ClInclude Include="src\camera\MyCamera.h" />
     <ClInclude Include="src\camera\MyOrbitControl.h" />
     <ClInclude Include="src\Common.h" />
-    <ClInclude Include="src\DynamicSceneObject.h" />
     <ClInclude Include="src\indoorscene\IndoorSceneObject.h" />
     <ClInclude Include="src\MyCameraManager.h" />
     <ClInclude Include="src\MyImGuiPanel.h" />
-    <ClInclude Include="src\MyPoissonSample.h" />
     <ClInclude Include="src\SceneManager.h" />
     <ClInclude Include="src\SceneRenderer.h" />
     <ClInclude Include="src\Shader.h" />
-    <ClInclude Include="src\terrain\MyTerrain.h" />
-    <ClInclude Include="src\terrain\MyTerrainData.h" />
-    <ClInclude Include="src\terrain\MyViewFrustum.h" />
-    <ClInclude Include="src\terrain\TerrainSceneObject.h" />
-    <ClInclude Include="src\ViewFrustumSceneObject.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\shader\oglFragmentShader.glsl" />

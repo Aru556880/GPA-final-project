@@ -7,9 +7,10 @@
 using std::cout;
 using std::string;
 
-string indoor_filepath = "assets/indoor/Grey_White_Room.obj";
+string indoor_filepath = "assets/indoor/Grey_White_Room_new.obj";
+string indoor_filepath2 = "assets/indoor/Grey_White_Room_old.obj";
 
-void LoadModel(vector<Shape>& , string);
+void LoadModel(vector<Shape>& , string, uint, uint);
 
 IndoorSceneObject::IndoorSceneObject()
 {
@@ -23,7 +24,8 @@ IndoorSceneObject::~IndoorSceneObject()
 }
 
 void IndoorSceneObject::init() {
-	LoadModel(this->m_shapes, indoor_filepath);
+	LoadModel(this->m_shapes, indoor_filepath, 0, 21);
+	LoadModel(this->m_shapes, indoor_filepath2, 65, 68);
 }
 
 void IndoorSceneObject::update() {
@@ -51,10 +53,10 @@ void IndoorSceneObject::update() {
 }
 
 
-void LoadModel(vector<Shape>& shapes ,string filePath) {
+void LoadModel(vector<Shape>& shapes ,string filePath, uint start_mesh, uint end_mesh) {
 	const aiScene* scene;
 
-	scene = aiImportFile(filePath.c_str(), aiProcess_Triangulate );
+	scene = aiImportFile(filePath.c_str(), aiProcess_Triangulate);
 
 	if (!scene)
 	{
@@ -88,8 +90,6 @@ void LoadModel(vector<Shape>& shapes ,string filePath) {
 			glBindTexture(GL_TEXTURE_2D, Material.diffuse_tex);
 
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tdata.width, tdata.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tdata.data);
-			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 			glGenerateMipmap(GL_TEXTURE_2D);
 
@@ -108,7 +108,8 @@ void LoadModel(vector<Shape>& shapes ,string filePath) {
 	cout << "finish material loading!" << endl;
 
 	// load geometry and save them with material
-	for (unsigned int i = 0; i < scene->mNumMeshes; ++i) {
+	int meshnum = glm::min(scene->mNumMeshes, end_mesh);
+	for (unsigned int i = start_mesh; i < meshnum; ++i) {
 		aiMesh* mesh = scene->mMeshes[i];
 
 		Shape shape;
