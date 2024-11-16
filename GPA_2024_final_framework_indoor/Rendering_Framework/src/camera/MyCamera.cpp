@@ -27,6 +27,13 @@ MyCamera::~MyCamera()
 {
 }
 
+glm::vec3* MyCamera:: viewOrig_ref() {
+	return &(this->m_viewOrg);
+}
+glm::vec3* MyCamera::lookCenter_ref() {
+	return &(this->m_lookCenter);
+}
+
 void MyCamera::setViewOrg(const glm::vec3& org) {
 	this->m_viewOrg = org;
 }

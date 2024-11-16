@@ -35,7 +35,9 @@ public:
 	glm::vec3 viewOrig() const;
 	glm::vec3 lookCenter() const;
 	glm::vec3 upVector() const;
-
+	
+	glm::vec3* viewOrig_ref();
+	glm::vec3* lookCenter_ref();
 private:
 	glm::vec3 m_viewOrg;
 	glm::vec3 m_lookCenter;

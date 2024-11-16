@@ -56,6 +56,6 @@ public:
 	int m_fs_diffuseAlbedo;
 	int m_fs_useTexture;
 
-	int m_test_meshcount = 0;
+	float m_test_meshcount = 0;
 };
 

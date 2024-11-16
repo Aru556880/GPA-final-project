@@ -41,6 +41,9 @@ public:
 	glm::vec3 playerViewOrig() const;
 	glm::vec3 playerCameraLookCenter() const;
 
+	glm::vec3* playerViewOrig_ref();
+	glm::vec3* playerCameraLookCenter_ref();
+
 
 	glm::ivec4 playerViewport() const;
 

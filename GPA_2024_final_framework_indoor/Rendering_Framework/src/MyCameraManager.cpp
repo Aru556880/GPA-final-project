@@ -132,6 +132,9 @@ glm::mat4 MyCameraManager::playerProjectionMatrix() const { return this->m_playe
 glm::vec3 MyCameraManager::playerViewOrig() const { return this->m_playerMyCamera->viewOrig(); }
 glm::vec3 MyCameraManager::playerCameraLookCenter() const { return this->m_playerMyCamera->lookCenter(); }
 
+glm::vec3* MyCameraManager::playerViewOrig_ref() { return this->m_playerMyCamera->viewOrig_ref(); }
+glm::vec3* MyCameraManager::playerCameraLookCenter_ref() { return this->m_playerMyCamera->lookCenter_ref(); }
+
 glm::ivec4 MyCameraManager::playerViewport() const { return this->m_playerViewport; }
 
 float MyCameraManager::playerCameraNear() const { return 0.1; }

@@ -177,7 +177,7 @@ bool initializeGL(){
 	
 	resize(FRAME_WIDTH, FRAME_HEIGHT);
 	
-	m_imguiPanel = new MyImGuiPanel();		
+	m_imguiPanel = new MyImGuiPanel(m_myCameraManager);
 	
 	return true;
 }
