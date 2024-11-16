@@ -23,6 +23,7 @@ void MyImGuiPanel::update() {
 
 	ImGui::InputFloat3("Eye Position", &(m_cameraManager->playerViewOrig_ref()->x));
 	ImGui::InputFloat3("Look Center", &(m_cameraManager->playerCameraLookCenter_ref()->x));
+	ImGui::InputFloat3("Light Position", &(SceneManager::Instance()->light_position.x));
 
 }
 

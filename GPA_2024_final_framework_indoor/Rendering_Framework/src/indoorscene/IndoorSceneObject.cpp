@@ -10,7 +10,7 @@ using std::string;
 string indoor_filepath = "assets/indoor/Grey_White_Room_new.obj";
 string indoor_filepath2 = "assets/indoor/Grey_White_Room_old.obj";
 
-void LoadModel(vector<Shape>& , string, uint, uint);
+void LoadModel(vector<MyMesh>& , string, uint, uint);
 
 IndoorSceneObject::IndoorSceneObject()
 {
@@ -47,16 +47,22 @@ void IndoorSceneObject::update() {
 
 		glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(this->m_modelMat));
 		glUniform1i(SceneManager::Instance()->m_fs_pixelProcessIdHandle, this->m_pixelFunctionId);
-		glUniform3fv(SceneManager::Instance()->m_fs_diffuseAlbedo, 1, value_ptr(this->m_shapes[i].material.Kd));
+		
+		glUniform3fv(SceneManager::Instance()->m_lightPositionHandle, 1, value_ptr(SceneManager::Instance()->light_position));
+		glUniform3fv(SceneManager::Instance()->m_ambientAlbedoHandle, 1, value_ptr(this->m_shapes[i].material.Ka));		
+		glUniform3fv(SceneManager::Instance()->m_diffuseAlbedoHandle, 1, value_ptr(this->m_shapes[i].material.Kd));
+		glUniform3fv(SceneManager::Instance()->m_specularAlbedoHandle, 1, value_ptr(this->m_shapes[i].material.Ks));
+		glUniform1f(SceneManager::Instance()->m_shininessHandle, this->m_shapes[i].material.shininess);
+
 		glDrawElements(GL_TRIANGLES, this->m_shapes[i].drawCount, GL_UNSIGNED_INT, nullptr);
 	}
 }
 
 
-void LoadModel(vector<Shape>& shapes ,string filePath, uint start_mesh, uint end_mesh) {
+void LoadModel(vector<MyMesh>& shapes ,string filePath, uint start_mesh, uint end_mesh) {
 	const aiScene* scene;
 
-	scene = aiImportFile(filePath.c_str(), aiProcess_Triangulate);
+	scene = aiImportFile(filePath.c_str(), aiProcess_Triangulate | aiProcess_GenNormals);
 
 	if (!scene)
 	{
@@ -79,6 +85,7 @@ void LoadModel(vector<Shape>& shapes ,string filePath, uint start_mesh, uint end
 		aiMaterial* material = scene->mMaterials[i];
 		aiString texturePath;
 		aiColor3D color;
+		float shininess;
 
 		// diffuse texture
 		if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == aiReturn_SUCCESS)
@@ -101,8 +108,17 @@ void LoadModel(vector<Shape>& shapes ,string filePath, uint start_mesh, uint end
 			Material.useTextrue = false;
 		}
 
+		material->Get(AI_MATKEY_COLOR_AMBIENT, color);
+		Material.Ka = vec3(color.r, color.g, color.b);
+
 		material->Get(AI_MATKEY_COLOR_DIFFUSE, color);
 		Material.Kd = vec3(color.r, color.g, color.b);
+
+		material->Get(AI_MATKEY_COLOR_SPECULAR, color);
+		Material.Ks = vec3(color.r, color.g, color.b);
+		
+		material->Get(AI_MATKEY_SHININESS, shininess);
+		Material.shininess = shininess;
 		materials.push_back(Material);
 	}
 	cout << "finish material loading!" << endl;
@@ -112,7 +128,7 @@ void LoadModel(vector<Shape>& shapes ,string filePath, uint start_mesh, uint end
 	for (unsigned int i = start_mesh; i < meshnum; ++i) {
 		aiMesh* mesh = scene->mMeshes[i];
 
-		Shape shape;
+		MyMesh shape;
 		glGenVertexArrays(1, &shape.vao);
 
 		vector<float> vertices, texcoords, normals;

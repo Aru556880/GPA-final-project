@@ -1,9 +1,9 @@
 #pragma once
 
 #include <glad\glad.h>
+#include <glm\glm.hpp>
 
 // Singleton
-
 class SceneManager
 {
 private:
@@ -29,33 +29,34 @@ public:
 	GLuint m_modelMatHandle;
 	GLuint m_viewMatHandle;
 	GLuint m_projMatHandle;
-	GLuint m_terrainVToUVMatHandle;
+
+	GLuint m_lightPositionHandle;
+	GLint m_ambientAlbedoHandle;
+	GLint m_diffuseAlbedoHandle;
+	GLint m_specularAlbedoHandle;
+	GLint m_shininessHandle;
 
 
 	GLuint m_albedoMapHandle;
 	GLuint m_normalMapHandle;
-	GLuint m_elevationMapHandle;
 	
 	GLuint m_fs_pixelProcessIdHandle;
 	GLuint m_vs_vertexProcessIdHandle;
 
 	GLenum m_albedoTexUnit;
 	GLenum m_normalTexUnit;
-	GLenum m_elevationTexUnit;
 
 
 	int m_albedoMapTexIdx;
-	int m_elevationMapTexIdx;
 	int m_normalMapTexIdx;
 
 	int m_vs_commonProcess;
-	int m_vs_terrainProcess;	
 	
 	int m_fs_pureColor;	
 	int m_fs_terrainPass;
-	int m_fs_diffuseAlbedo;
 	int m_fs_useTexture;
 
 	float m_test_meshcount = 0;
+	glm::vec3 light_position = glm::vec3(-2.845, 2.028, -1.293);
 };
 

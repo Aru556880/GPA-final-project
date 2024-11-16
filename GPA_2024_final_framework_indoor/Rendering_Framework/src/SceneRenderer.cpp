@@ -75,41 +75,39 @@ bool SceneRenderer::setUpShader(){
 	const GLuint programId = this->m_shaderProgram->programId();
 
 	SceneManager *manager = SceneManager::Instance();
+	// vertex attribute 
 	manager->m_vertexHandle = 0;
 	manager->m_normalHandle = 1;
 	manager->m_uvHandle = 2;
 
 	// =================================
+	// transform matrix uniform location
 	manager->m_modelMatHandle = 0;
-	manager->m_viewMatHandle = 7;
-	manager->m_projMatHandle = 8;
-	manager->m_terrainVToUVMatHandle = 9;
+	manager->m_viewMatHandle = 1;
+	manager->m_projMatHandle = 2;
 
-	manager->m_albedoMapHandle = 4;
-	manager->m_albedoMapTexIdx = 0;
+	manager->m_albedoMapHandle = 4; // uniform location
+	manager->m_albedoMapTexIdx = 0; // texture binding point
 	glUniform1i(manager->m_albedoMapHandle, manager->m_albedoMapTexIdx);
-
-	manager->m_elevationMapHandle = 5;
-	manager->m_elevationMapTexIdx = 3;
-	glUniform1i(manager->m_elevationMapHandle, manager->m_elevationMapTexIdx);
 	
-	manager->m_normalMapHandle = 6;
-	manager->m_normalMapTexIdx = 2;
+	manager->m_normalMapHandle = 6; // uniform location
+	manager->m_normalMapTexIdx = 2; // texture binding point
 	glUniform1i(manager->m_normalMapHandle, manager->m_normalMapTexIdx);
 	
 	manager->m_albedoTexUnit = GL_TEXTURE0;
-	manager->m_elevationTexUnit = GL_TEXTURE3;
 	manager->m_normalTexUnit = GL_TEXTURE2;
 
-	manager->m_vs_vertexProcessIdHandle = 1;
+	manager->m_vs_vertexProcessIdHandle = 5;
 	manager->m_vs_commonProcess = 0;
-	manager->m_vs_terrainProcess = 3;
 
-	manager->m_fs_pixelProcessIdHandle = 2;
-	manager->m_fs_pureColor = 5;
-	manager->m_fs_terrainPass = 7;
-	manager->m_fs_diffuseAlbedo = 15;
-	manager->m_fs_useTexture = 16;
+	manager->m_fs_pixelProcessIdHandle = 3;
+	manager->m_fs_useTexture = 12;
+
+	manager->m_lightPositionHandle = 11;
+	manager->m_ambientAlbedoHandle = 13;
+	manager->m_diffuseAlbedoHandle = 14;
+	manager->m_specularAlbedoHandle = 15;
+	manager->m_shininessHandle = 16;
 	
 	return true;
 }

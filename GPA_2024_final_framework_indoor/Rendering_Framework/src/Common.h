@@ -34,11 +34,11 @@ struct Material
     vec3 Ka;
     vec3 Kd;
     vec3 Ks;
-    float shineness;
+    float shininess;
 
 };
 
-struct Shape
+struct MyMesh
 {
     GLuint vao;
     GLuint vbo_position;

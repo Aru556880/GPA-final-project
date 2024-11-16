@@ -24,7 +24,7 @@ private:
 	//GLuint m_normalMapHandle;
 	//GLuint m_albedoMapHandle;
 
-	vector<Shape> m_shapes;
+	vector<MyMesh> m_shapes;
 	mat4 m_modelMat = mat4(1.0);
 	GLuint m_pixelFunctionId = 0;
 };
