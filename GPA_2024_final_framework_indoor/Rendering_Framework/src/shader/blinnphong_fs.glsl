@@ -5,9 +5,8 @@ in vec3 f_uv ;
 
 layout (location = 0) out vec4 fragColor ;
 
-layout(location = 3) uniform int pixelProcessId;
-layout(location = 4) uniform sampler2D albedoTexture ;
-layout(location = 12) uniform int useTexture; // useTextrue < 0: does not have texture
+layout(binding = 0) uniform sampler2D albedoTexture ;
+layout(binding = 1) uniform sampler2DShadow shadow_tex;
 
 layout(location = 13) uniform vec3 ambient_albedo;
 layout(location = 14) uniform vec3 diffuse_albedo;
@@ -17,6 +16,7 @@ layout(location = 16) uniform float shininess;
 
 in VS_OUT
 {
+	vec4 shadow_coord;
 	vec3 N;
 	vec3 L;
 	vec3 V;
@@ -35,17 +35,12 @@ vec3 textureColor(){
 		return texel.rgb; 	
 }
 
-void ShadingColor(){
-	
-}
-
 void main(){	
 	vec3 Ka = ambient_albedo;
 	vec3 Kd = diffuse_albedo;
 	vec3 Ks = specular_albedo;
 
-	if(useTexture > 0)
-		Kd = textureColor().rgb ;
+	Kd = textureColor().rgb ;
 
 	// calculate shading
 	vec3 N = normalize(fs_in.N);
@@ -56,6 +51,7 @@ void main(){
 	vec3 ambient = Ia * Ka;
 	vec3 diffuse = Id * max(dot(N, L), 0) * Kd;
 	vec3 specular = Is * pow(max(dot(N, H), 0), shininess) * Ks;
-	
-	fragColor = vec4( diffuse * 0.8 + specular, 1.0);
+	vec4 shadingColor = vec4( ambient * 0.1 + diffuse + specular, 1.0);
+	//fragColor = shadingColor;
+	fragColor = textureProj(shadow_tex, fs_in.shadow_coord) * shadingColor ;
 }

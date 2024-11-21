@@ -57,8 +57,14 @@
     <ClInclude Include="src\Shader.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="src\shader\oglFragmentShader.glsl" />
-    <None Include="src\shader\oglVertexShader.glsl" />
+    <None Include="src\shader\blinnphong_fs.glsl" />
+    <None Include="src\shader\blinnphong_vs.glsl" />
+    <None Include="src\shader\deferred_fs.glsl" />
+    <None Include="src\shader\deferred_vs.glsl" />
+    <None Include="src\shader\depth_fs.glsl" />
+    <None Include="src\shader\depth_vs.glsl" />
+    <None Include="src\shader\geometry_fs.glsl" />
+    <None Include="src\shader\geometry_vs.glsl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{ADA5FF44-3FBE-44D5-94ED-FFD82E3DF373}</ProjectGuid>

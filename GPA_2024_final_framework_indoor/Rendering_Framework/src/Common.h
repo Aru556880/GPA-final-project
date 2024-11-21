@@ -30,7 +30,6 @@ typedef struct _texture_data
 struct Material
 {
     GLuint diffuse_tex;
-    bool useTextrue;
     vec3 Ka;
     vec3 Kd;
     vec3 Ks;
@@ -51,3 +50,4 @@ struct MyMesh
 
 
 texture_data loadImg(const char* path);
+void LoadModel(vector<MyMesh>& shapes, string filePath, uint start_mesh, uint end_mesh);

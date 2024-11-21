@@ -30,6 +30,8 @@ public:
 	GLuint m_viewMatHandle;
 	GLuint m_projMatHandle;
 
+	GLuint m_shadowMatHandle;
+
 	GLuint m_lightPositionHandle;
 	GLint m_ambientAlbedoHandle;
 	GLint m_diffuseAlbedoHandle;
@@ -39,9 +41,7 @@ public:
 
 	GLuint m_albedoMapHandle;
 	GLuint m_normalMapHandle;
-	
-	GLuint m_fs_pixelProcessIdHandle;
-	GLuint m_vs_vertexProcessIdHandle;
+	GLuint m_depthMapHandle;
 
 	GLenum m_albedoTexUnit;
 	GLenum m_normalTexUnit;
@@ -50,13 +50,9 @@ public:
 	int m_albedoMapTexIdx;
 	int m_normalMapTexIdx;
 
-	int m_vs_commonProcess;
-	
-	int m_fs_pureColor;	
-	int m_fs_terrainPass;
-	int m_fs_useTexture;
 
 	float m_test_meshcount = 0;
 	glm::vec3 light_position = glm::vec3(-2.845, 2.028, -1.293);
+
 };
 

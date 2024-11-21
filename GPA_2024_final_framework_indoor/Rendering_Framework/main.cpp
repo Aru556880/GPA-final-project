@@ -30,7 +30,7 @@ bool m_leftButtonPressed = false;
 bool m_rightButtonPressed = false;
 double cursorPos[2];
 
-
+GLFWwindow* window;
 
 MyImGuiPanel* m_imguiPanel = nullptr;
 
@@ -50,7 +50,7 @@ int main(){
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	GLFWwindow *window = glfwCreateWindow(FRAME_WIDTH, FRAME_HEIGHT, "rendering", nullptr, nullptr);
+	window = glfwCreateWindow(FRAME_WIDTH, FRAME_HEIGHT, "rendering", nullptr, nullptr);
 	if (window == nullptr){
 		std::cout << "failed to create GLFW window\n";
 		glfwTerminate();
@@ -130,37 +130,10 @@ void vsyncDisabled(GLFWwindow *window) {
 
 
 bool initializeGL(){
-	// initialize shader program
-	// vertex shader
-	Shader* vsShader = new Shader(GL_VERTEX_SHADER);
-	vsShader->createShaderFromFile("src\\shader\\oglVertexShader.glsl");
-	std::cout << vsShader->shaderInfoLog() << "\n";
-
-	// fragment shader
-	Shader* fsShader = new Shader(GL_FRAGMENT_SHADER);
-	fsShader->createShaderFromFile("src\\shader\\oglFragmentShader.glsl");
-	std::cout << fsShader->shaderInfoLog() << "\n";
-
-	// shader program
-	ShaderProgram* shaderProgram = new ShaderProgram();
-	shaderProgram->init();
-	shaderProgram->attachShader(vsShader);
-	shaderProgram->attachShader(fsShader);
-	shaderProgram->checkStatus();
-	if (shaderProgram->status() != ShaderProgramStatus::READY) {
-		return false;
-	}
-	shaderProgram->linkProgram();
-
-	vsShader->releaseShader();
-	fsShader->releaseShader();
-	
-	delete vsShader;
-	delete fsShader;
 	// =================================================================
 	// init renderer
 	defaultRenderer = new SceneRenderer();
-	if (!defaultRenderer->initialize(FRAME_WIDTH, FRAME_HEIGHT, shaderProgram)) {
+	if (!defaultRenderer->initialize(FRAME_WIDTH, FRAME_HEIGHT)) {
 		return false;
 	}
 
@@ -169,7 +142,6 @@ bool initializeGL(){
 	m_myCameraManager = new INANOA::MyCameraManager();
 	m_myCameraManager->init(FRAME_WIDTH, FRAME_HEIGHT);
 	
-	// initialize terrain
 	m_indoorSO = new IndoorSceneObject();
 	m_indoorSO->init();
 	defaultRenderer->appendIndoorSceneObject(m_indoorSO);
@@ -216,7 +188,7 @@ void paintGL(){
 	defaultRenderer->setView(playerVM);
 	defaultRenderer->setProjection(playerProjMat);
 	defaultRenderer->renderPass();
-
+	
 	// ===============================
 
 	ImGui::Begin("My name is window");
@@ -295,4 +267,162 @@ texture_data loadImg(const char* path)
 		cerr << "Cannot load image from: " << path << endl;
 	}
 	return texture;
+}
+
+void LoadModel(vector<MyMesh>& shapes, string filePath, uint start_mesh, uint end_mesh) {
+	const aiScene* scene;
+
+	scene = aiImportFile(filePath.c_str(), aiProcess_Triangulate | aiProcess_GenNormals);
+
+	if (!scene)
+	{
+		std::cerr << "Error loading file: " << filePath << std::endl;
+		std::cerr << "Assimp error: " << aiGetErrorString() << std::endl;
+		return;
+	}
+	else
+	{
+		cout << "File loaded successfully!" << std::endl;
+	}
+
+	cout << "Mesh: " << scene->mNumMeshes << endl;
+	cout << "Material: " << scene->mNumMaterials << endl;
+
+	// load material
+	vector<Material> materials;
+	for (unsigned int i = 0; i < scene->mNumMaterials; ++i) {
+		Material Material;
+		aiMaterial* material = scene->mMaterials[i];
+		aiString texturePath;
+		aiColor3D color;
+		float shininess;
+
+		// diffuse texture
+		if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == aiReturn_SUCCESS)
+		{
+			string imgPath = "assets/indoor/" + string(texturePath.C_Str());
+			texture_data tdata = loadImg(imgPath.c_str());
+			glGenTextures(1, &Material.diffuse_tex);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, Material.diffuse_tex);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tdata.width, tdata.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tdata.data);
+
+			glGenerateMipmap(GL_TEXTURE_2D);
+
+		}
+		else
+		{
+			glGenTextures(1, &Material.diffuse_tex);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, Material.diffuse_tex);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+			material->Get(AI_MATKEY_COLOR_DIFFUSE, color);
+
+			unsigned char colorData[] = {
+				color.r * 255, color.g * 255, color.b * 255, 255,
+				color.r * 255, color.g * 255, color.b * 255, 255,
+				color.r * 255, color.g * 255, color.b * 255, 255,
+				color.r * 255, color.g * 255, color.b * 255, 255,
+			};
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, colorData );
+			glGenerateMipmap(GL_TEXTURE_2D);
+			
+		}
+
+		material->Get(AI_MATKEY_COLOR_AMBIENT, color);
+		Material.Ka = vec3(color.r, color.g, color.b);
+
+		material->Get(AI_MATKEY_COLOR_DIFFUSE, color);
+		Material.Kd = vec3(color.r, color.g, color.b);
+
+		material->Get(AI_MATKEY_COLOR_SPECULAR, color);
+		Material.Ks = vec3(color.r, color.g, color.b);
+
+		material->Get(AI_MATKEY_SHININESS, shininess);
+		Material.shininess = shininess;
+		materials.push_back(Material);
+	}
+	std::cout << "finish material loading!" << endl;
+
+	// load geometry and save them with material
+	int meshnum = glm::min(scene->mNumMeshes, end_mesh);
+	for (unsigned int i = start_mesh; i < meshnum; ++i) {
+		aiMesh* mesh = scene->mMeshes[i];
+
+		MyMesh shape;
+		glGenVertexArrays(1, &shape.vao);
+
+		vector<float> vertices, texcoords, normals;
+		vector<unsigned int> indices;
+		//cout << i << " vertex: " << mesh->mNumVertices << endl;
+		for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
+		{
+			//if (i == 0)
+				//cout << mesh->mVertices[v][0] << ", " << mesh->mVertices[v][1] << ", " << mesh->mVertices[v][2] << endl;
+			vertices.push_back(mesh->mVertices[v][0]);
+			vertices.push_back(mesh->mVertices[v][1]);
+			vertices.push_back(mesh->mVertices[v][2]);
+
+			normals.push_back(mesh->mNormals[v][0]);
+			normals.push_back(mesh->mNormals[v][1]);
+			normals.push_back(mesh->mNormals[v][2]);
+
+			if (mesh->mTextureCoords[0]) {
+				// Check if texture coordinates exist
+				texcoords.push_back(mesh->mTextureCoords[0][v][0]);
+				texcoords.push_back(mesh->mTextureCoords[0][v][1]);
+
+			}
+			else {
+				texcoords.push_back(0.0f);
+				texcoords.push_back(0.0f);
+			}
+		}
+
+		// create 1 ibo to hold data
+		for (unsigned int f = 0; f < mesh->mNumFaces; ++f)
+		{
+			indices.push_back(mesh->mFaces[f].mIndices[0]);
+			indices.push_back(mesh->mFaces[f].mIndices[1]);
+			indices.push_back(mesh->mFaces[f].mIndices[2]);
+		}
+
+		glBindVertexArray(shape.vao);
+
+		glGenBuffers(1, &shape.vbo_position);
+		glGenBuffers(1, &shape.vbo_normal);
+		glGenBuffers(1, &shape.vbo_texcoord);
+		glGenBuffers(1, &shape.ibo);
+
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_position);
+		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(GL_FLOAT), vertices.data(), GL_STATIC_DRAW);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(0);
+
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_normal);
+		glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(GL_FLOAT), normals.data(), GL_STATIC_DRAW);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(1);
+
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_texcoord);
+		glBufferData(GL_ARRAY_BUFFER, texcoords.size() * sizeof(GL_FLOAT), texcoords.data(), GL_STATIC_DRAW);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(2);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.ibo);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GL_UNSIGNED_INT), indices.data(), GL_STATIC_DRAW);
+
+		int materialID = mesh->mMaterialIndex;
+		shape.drawCount = mesh->mNumFaces * 3;
+		shape.material = materials[materialID];
+		shapes.push_back(shape);
+	}
+
+	aiReleaseImport(scene);
+	glBindVertexArray(0);
 }
