@@ -37,7 +37,9 @@ private:
 	//GLuint m_normalMapHandle;
 	//GLuint m_albedoMapHandle;
 
-	vector<MyMesh> m_meshes;
+	vector<MyMesh> m_roomMeshes;
+	vector<MyMesh> m_triceMeshes;
+
 	mat4 m_modelMat = mat4(1.0);
 	mat4 m_projMat = mat4(1.0);;
 	mat4 m_viewMat = mat4(1.0);;
@@ -57,7 +59,9 @@ private:
 		GLuint fbo;
 		GLuint position_map;
 		GLuint normal_map;
+		GLuint ambient_map;
 		GLuint diffuse_map;
+		GLuint specular_map;
 		GLuint depth_map;
 		GLuint vao;
 	} gbuffer;

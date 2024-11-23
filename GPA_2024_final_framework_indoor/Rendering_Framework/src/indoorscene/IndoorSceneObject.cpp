@@ -2,16 +2,17 @@
 
 #include <iostream>
 #include <string>
-#define SHADOW_MAP_SIZE 1024
+#define SHADOW_MAP_SIZE 4096
 
 GLuint test;
 using std::cout;
 using std::string;
 
-string indoor_filepath = "assets/indoor/Grey_White_Room_new.obj";
-string indoor_filepath2 = "assets/indoor/Grey_White_Room_old.obj";
+string room1_filepath = "assets/indoor/Grey_White_Room_new.obj";
+string room2_filepath = "assets/indoor/Grey_White_Room_old.obj";
+string trice_filepath = "assets/indoor/trice.obj";
 
-void LoadModel(vector<MyMesh>& , string, uint, uint);
+void LoadMeshModel(vector<MyMesh>& , string, uint, uint);
 
 IndoorSceneObject::IndoorSceneObject()
 {
@@ -34,10 +35,20 @@ bool IndoorSceneObject::init() {
 	flag &= shadowmap_init();
 
 	// load wood table meshes and other meshes separately
-	LoadModel(this->m_meshes, indoor_filepath, 0, 21);
-	LoadModel(this->m_meshes, indoor_filepath2, 65, 68);
+	LoadMeshModel(this->m_triceMeshes, trice_filepath, 0, 1);
+	LoadMeshModel(this->m_roomMeshes, room1_filepath, 0, 21);
+	LoadMeshModel(this->m_roomMeshes, room2_filepath, 65, 68);
 
+	for (int i = 0;i < this->m_roomMeshes.size();++i) {
+		this->m_roomMeshes[i].m_modelMat = mat4(1.0);
+	}
 	
+	for (int i = 0;i < this->m_triceMeshes.size();++i) {
+		mat4 modelMat = 
+		this->m_triceMeshes[i].m_modelMat = 
+			translate(mat4(1.0f), vec3(2.05, 0.628725, -1.9)) * scale(mat4(1.0f), vec3(0.001f, 0.001f, 0.001f)) ;
+	}
+
 	return flag;
 }
 /////////////////////////////////////////////////////////
@@ -52,7 +63,7 @@ bool IndoorSceneObject::deferred_init(){
 	glGenFramebuffers(1, &gbuffer.fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, gbuffer.fbo);
 
-	glGenTextures(4, &gbuffer.position_map);
+	glGenTextures(6, &gbuffer.position_map);
 
 	glBindTexture(GL_TEXTURE_2D, gbuffer.position_map);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, 256, 256, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
@@ -64,7 +75,17 @@ bool IndoorSceneObject::deferred_init(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
+	glBindTexture(GL_TEXTURE_2D, gbuffer.ambient_map);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 256, 256, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
 	glBindTexture(GL_TEXTURE_2D, gbuffer.diffuse_map);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 256, 256, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	glBindTexture(GL_TEXTURE_2D, gbuffer.specular_map);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 256, 256, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -76,7 +97,9 @@ bool IndoorSceneObject::deferred_init(){
 
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gbuffer.position_map, 0);
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gbuffer.normal_map, 0);
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gbuffer.diffuse_map, 0);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gbuffer.ambient_map, 0);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, gbuffer.diffuse_map, 0);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, gbuffer.specular_map, 0);
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gbuffer.depth_map, 0);
 
 	glGenVertexArrays(1, &gbuffer.vao);
@@ -164,7 +187,13 @@ void IndoorSceneObject::resize(int w, int h) {
 	glBindTexture(GL_TEXTURE_2D, gbuffer.normal_map);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
 
+	glBindTexture(GL_TEXTURE_2D, gbuffer.ambient_map);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
 	glBindTexture(GL_TEXTURE_2D, gbuffer.diffuse_map);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+	glBindTexture(GL_TEXTURE_2D, gbuffer.specular_map);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
 	glBindTexture(GL_TEXTURE_2D, gbuffer.depth_map);
@@ -173,7 +202,7 @@ void IndoorSceneObject::resize(int w, int h) {
 }
 
 void IndoorSceneObject::update(){
-	this->shadowmap_update();
+	this->deferred_update();
 }
 
 void IndoorSceneObject::default_update() {
@@ -183,19 +212,19 @@ void IndoorSceneObject::default_update() {
 	glUniformMatrix4fv(SceneManager::Instance()->m_viewMatHandle, 1, false, glm::value_ptr(this->m_viewMat));
 	glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(this->m_modelMat));
 
-	for (int i = 0;i < m_meshes.size();++i) {
+	for (int i = 0;i < m_roomMeshes.size();++i) {
 	
-		glBindVertexArray(m_meshes[i].vao);
+		glBindVertexArray(m_roomMeshes[i].vao);
 
-		glBindTexture(GL_TEXTURE_2D, m_meshes[i].material.diffuse_tex);
+		glBindTexture(GL_TEXTURE_2D, m_roomMeshes[i].material.diffuse_tex);
 
 		glUniform3fv(SceneManager::Instance()->m_lightPositionHandle, 1, value_ptr(SceneManager::Instance()->light_position));
-		glUniform3fv(SceneManager::Instance()->m_ambientAlbedoHandle, 1, value_ptr(m_meshes[i].material.Ka));
-		glUniform3fv(SceneManager::Instance()->m_diffuseAlbedoHandle, 1, value_ptr(m_meshes[i].material.Kd));
-		glUniform3fv(SceneManager::Instance()->m_specularAlbedoHandle, 1, value_ptr(m_meshes[i].material.Ks));
-		glUniform1f(SceneManager::Instance()->m_shininessHandle, m_meshes[i].material.shininess);
+		glUniform3fv(SceneManager::Instance()->m_ambientAlbedoHandle, 1, value_ptr(m_roomMeshes[i].material.Ka));
+		glUniform3fv(SceneManager::Instance()->m_diffuseAlbedoHandle, 1, value_ptr(m_roomMeshes[i].material.Kd));
+		glUniform3fv(SceneManager::Instance()->m_specularAlbedoHandle, 1, value_ptr(m_roomMeshes[i].material.Ks));
+		glUniform1f(SceneManager::Instance()->m_shininessHandle, m_roomMeshes[i].material.shininess);
 
-		glDrawElements(GL_TRIANGLES, m_meshes[i].drawCount, GL_UNSIGNED_INT, nullptr);
+		glDrawElements(GL_TRIANGLES, m_roomMeshes[i].drawCount, GL_UNSIGNED_INT, nullptr);
 	}
 
 }
@@ -204,8 +233,9 @@ void IndoorSceneObject::default_update() {
 void IndoorSceneObject::deferred_update() {
 	// geometry pass
 	glBindFramebuffer(GL_FRAMEBUFFER, gbuffer.fbo);
-	const GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
-	glDrawBuffers(3, draw_buffers);
+	const GLenum draw_buffers[] = 
+		{ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4 };
+	glDrawBuffers(5, draw_buffers);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	m_geometryProgram->useProgram();
@@ -215,11 +245,28 @@ void IndoorSceneObject::deferred_update() {
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
-	for (int i = 0;i < m_meshes.size();++i) {
 
-		glBindVertexArray(m_meshes[i].vao);
-		glBindTexture(GL_TEXTURE_2D, m_meshes[i].material.diffuse_tex);
-		glDrawElements(GL_TRIANGLES, m_meshes[i].drawCount, GL_UNSIGNED_INT, nullptr);
+	for (int i = 0;i < m_roomMeshes.size();++i) {
+		glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(m_roomMeshes[i].m_modelMat));
+		glBindVertexArray(m_roomMeshes[i].vao);
+		glUniform3fv(SceneManager::Instance()->m_ambientAlbedoHandle, 1, value_ptr(m_roomMeshes[i].material.Ka));
+		glUniform3fv(SceneManager::Instance()->m_diffuseAlbedoHandle, 1, value_ptr(m_roomMeshes[i].material.Kd));
+		glUniform3fv(SceneManager::Instance()->m_specularAlbedoHandle, 1, value_ptr(m_roomMeshes[i].material.Ks));;
+		
+		glBindTexture(GL_TEXTURE_2D, m_roomMeshes[i].material.diffuse_tex);
+		glDrawElements(GL_TRIANGLES, m_roomMeshes[i].drawCount, GL_UNSIGNED_INT, nullptr);
+	}
+
+	
+	for (int i = 0;i < m_triceMeshes.size();++i) {
+		glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(m_triceMeshes[i].m_modelMat));
+		glBindVertexArray(m_triceMeshes[i].vao);
+		glUniform3fv(SceneManager::Instance()->m_ambientAlbedoHandle, 1, value_ptr(m_triceMeshes[i].material.Ka));
+		glUniform3fv(SceneManager::Instance()->m_diffuseAlbedoHandle, 1, value_ptr(m_triceMeshes[i].material.Kd));
+		glUniform3fv(SceneManager::Instance()->m_specularAlbedoHandle, 1, value_ptr(m_triceMeshes[i].material.Ks));
+
+		glBindTexture(GL_TEXTURE_2D, m_triceMeshes[i].material.diffuse_tex);
+		glDrawElements(GL_TRIANGLES, m_triceMeshes[i].drawCount, GL_UNSIGNED_INT, nullptr);
 	}
 
 	// deferred pass
@@ -232,7 +279,7 @@ void IndoorSceneObject::deferred_update() {
 
 	glBindVertexArray(gbuffer.vao);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, gbuffer.diffuse_map);
+	glBindTexture(GL_TEXTURE_2D, gbuffer.normal_map);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
 
@@ -265,9 +312,16 @@ void IndoorSceneObject::shadowmap_update(){
 	shadowmap.light_mvp = 0;
 	glUniformMatrix4fv(shadowmap.light_mvp, 1, GL_FALSE, value_ptr(light_vp_matrix * this->m_modelMat));
 	
-	for (int i = 0;i < m_meshes.size();++i) {
-		glBindVertexArray(m_meshes[i].vao);
-		glDrawElements(GL_TRIANGLES, m_meshes[i].drawCount, GL_UNSIGNED_INT, nullptr);
+	for (int i = 0;i < m_roomMeshes.size();++i) {
+		glUniformMatrix4fv(shadowmap.light_mvp, 1, GL_FALSE, value_ptr(light_vp_matrix * m_roomMeshes[i].m_modelMat));
+		glBindVertexArray(m_roomMeshes[i].vao);
+		glDrawElements(GL_TRIANGLES, m_roomMeshes[i].drawCount, GL_UNSIGNED_INT, nullptr);
+	}
+
+	for (int i = 0;i < m_triceMeshes.size();++i) {
+		glUniformMatrix4fv(shadowmap.light_mvp, 1, GL_FALSE, value_ptr(light_vp_matrix * m_triceMeshes[i].m_modelMat));
+		glBindVertexArray(m_triceMeshes[i].vao);
+		glDrawElements(GL_TRIANGLES, m_triceMeshes[i].drawCount, GL_UNSIGNED_INT, nullptr);
 	}
 
 	glDisable(GL_POLYGON_OFFSET_FILL);
@@ -275,56 +329,76 @@ void IndoorSceneObject::shadowmap_update(){
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glViewport(0, 0, m_window_width, m_window_height);
-	/*
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glDrawBuffer(GL_BACK);
-
-	m_deferredProgram->useProgram();
-
-	glDisable(GL_DEPTH_TEST);
-
-	glBindVertexArray(gbuffer.vao);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, shadowmap.depth_tex);
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);*/
 
 	// shading pass
 	
 	m_blinnphongProgram->useProgram();
 	glUniformMatrix4fv(SceneManager::Instance()->m_projMatHandle, 1, false, glm::value_ptr(this->m_projMat));
 	glUniformMatrix4fv(SceneManager::Instance()->m_viewMatHandle, 1, false, glm::value_ptr(this->m_viewMat));
-	glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(this->m_modelMat));
 	
-	mat4 shadow_matrix = shadow_sbpv_matrix * this->m_modelMat;
+	mat4 shadow_matrix = mat4(1.0);
 
-	for (int i = 0;i < m_meshes.size();++i) {
+	glUniform1i(20, -1);
+	for (int i = 0;i < m_roomMeshes.size();++i) {
 
-		glBindVertexArray(m_meshes[i].vao);
-		
+		glBindVertexArray(m_roomMeshes[i].vao);
+
+		shadow_matrix = shadow_sbpv_matrix * m_roomMeshes[i].m_modelMat;
 		glUniformMatrix4fv(SceneManager::Instance()->m_shadowMatHandle, 1, false, glm::value_ptr(shadow_matrix));
 
+		glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(m_roomMeshes[i].m_modelMat));
+
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, m_meshes[i].material.diffuse_tex);
+		glBindTexture(GL_TEXTURE_2D, m_roomMeshes[i].material.diffuse_tex);
 
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, shadowmap.depth_tex);
 
 		glUniform3fv(SceneManager::Instance()->m_lightPositionHandle, 1, value_ptr(SceneManager::Instance()->light_position));
-		glUniform3fv(SceneManager::Instance()->m_ambientAlbedoHandle, 1, value_ptr(m_meshes[i].material.Ka));
-		glUniform3fv(SceneManager::Instance()->m_diffuseAlbedoHandle, 1, value_ptr(m_meshes[i].material.Kd));
-		glUniform3fv(SceneManager::Instance()->m_specularAlbedoHandle, 1, value_ptr(m_meshes[i].material.Ks));
-		glUniform1f(SceneManager::Instance()->m_shininessHandle, m_meshes[i].material.shininess);
+		glUniform3fv(SceneManager::Instance()->m_ambientAlbedoHandle, 1, value_ptr(m_roomMeshes[i].material.Ka));
+		glUniform3fv(SceneManager::Instance()->m_diffuseAlbedoHandle, 1, value_ptr(m_roomMeshes[i].material.Kd));
+		glUniform3fv(SceneManager::Instance()->m_specularAlbedoHandle, 1, value_ptr(m_roomMeshes[i].material.Ks));
+		glUniform1f(SceneManager::Instance()->m_shininessHandle, m_roomMeshes[i].material.shininess);
 
-		glDrawElements(GL_TRIANGLES, m_meshes[i].drawCount, GL_UNSIGNED_INT, nullptr);
+		glDrawElements(GL_TRIANGLES, m_roomMeshes[i].drawCount, GL_UNSIGNED_INT, nullptr);
+	}
+
+	glUniform1i(20, 1);
+	for (int i = 0;i < m_triceMeshes.size();++i) {
+
+		glBindVertexArray(m_triceMeshes[i].vao);
+
+		shadow_matrix = shadow_sbpv_matrix * m_triceMeshes[i].m_modelMat;
+		glUniformMatrix4fv(SceneManager::Instance()->m_shadowMatHandle, 1, false, glm::value_ptr(shadow_matrix));
+
+
+		glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(m_triceMeshes[i].m_modelMat));
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, m_triceMeshes[i].material.diffuse_tex);
+
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, shadowmap.depth_tex);
+
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, m_triceMeshes[i].material.normalmap_tex);
+
+		glUniform3fv(SceneManager::Instance()->m_lightPositionHandle, 1, value_ptr(SceneManager::Instance()->light_position));
+		glUniform3fv(SceneManager::Instance()->m_ambientAlbedoHandle, 1, value_ptr(m_triceMeshes[i].material.Ka));
+		glUniform3fv(SceneManager::Instance()->m_diffuseAlbedoHandle, 1, value_ptr(m_triceMeshes[i].material.Kd));
+		glUniform3fv(SceneManager::Instance()->m_specularAlbedoHandle, 1, value_ptr(m_triceMeshes[i].material.Ks));
+		glUniform1f(SceneManager::Instance()->m_shininessHandle, m_triceMeshes[i].material.shininess);
+
+		glDrawElements(GL_TRIANGLES, m_triceMeshes[i].drawCount, GL_UNSIGNED_INT, nullptr);
 	}
 
 }
 
-namespace DEFERRED_SHADING_TYPR {
-	const GLuint BLINNPHONG = 0;
-
-	const GLint WORLD_COORD = 1;
-	const GLint NORMAL = 2;
+namespace DEFERRED_MAP_TYPE {
+	const GLint WORLD_COORD = 0;
+	const GLint NORMAL = 1;
+	const GLint AMBIENT = 2;
 	const GLint DIFFUSE = 3;
+	const GLint SPECULAR = 4;
 
 }

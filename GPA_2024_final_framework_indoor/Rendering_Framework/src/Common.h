@@ -35,14 +35,19 @@ struct Material
     vec3 Ks;
     float shininess;
 
+    bool useNormalMap;
+    GLuint normalmap_tex;
 };
 
 struct MyMesh
 {
+    mat4 m_modelMat = mat4(1.0);
+    
     GLuint vao;
     GLuint vbo_position;
     GLuint vbo_normal;
     GLuint vbo_texcoord;
+    GLuint vbo_tangent; 
     GLuint ibo;
     int drawCount;
     Material material;
@@ -50,4 +55,4 @@ struct MyMesh
 
 
 texture_data loadImg(const char* path);
-void LoadModel(vector<MyMesh>& shapes, string filePath, uint start_mesh, uint end_mesh);
+void LoadMeshModel(vector<MyMesh>& shapes, string filePath, uint start_mesh, uint end_mesh);

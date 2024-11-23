@@ -269,7 +269,7 @@ texture_data loadImg(const char* path)
 	return texture;
 }
 
-void LoadModel(vector<MyMesh>& shapes, string filePath, uint start_mesh, uint end_mesh) {
+void LoadMeshModel(vector<MyMesh>& shapes, string filePath, uint start_mesh, uint end_mesh) {
 	const aiScene* scene;
 
 	scene = aiImportFile(filePath.c_str(), aiProcess_Triangulate | aiProcess_GenNormals);
@@ -290,6 +290,7 @@ void LoadModel(vector<MyMesh>& shapes, string filePath, uint start_mesh, uint en
 
 	// load material
 	vector<Material> materials;
+	bool use_normalMap = false;
 	for (unsigned int i = 0; i < scene->mNumMaterials; ++i) {
 		Material Material;
 		aiMaterial* material = scene->mMaterials[i];
@@ -345,6 +346,30 @@ void LoadModel(vector<MyMesh>& shapes, string filePath, uint start_mesh, uint en
 
 		material->Get(AI_MATKEY_SHININESS, shininess);
 		Material.shininess = shininess;
+
+		// normal map setup
+		aiString normalTexturePath;
+		if (material->GetTexture(aiTextureType_HEIGHT, 0, &normalTexturePath) == aiReturn_SUCCESS)
+		{
+			string imgPath = "assets/indoor/" + string(normalTexturePath.C_Str());
+			Material.useNormalMap = true;
+
+			texture_data tdata = loadImg(imgPath.c_str());
+			glGenTextures(1, &Material.normalmap_tex);
+			glActiveTexture(GL_TEXTURE2);
+			glBindTexture(GL_TEXTURE_2D, Material.normalmap_tex);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tdata.width, tdata.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tdata.data);
+
+			glGenerateMipmap(GL_TEXTURE_2D);
+		}
+		else
+		{
+			Material.useNormalMap = false;
+		}
+
 		materials.push_back(Material);
 	}
 	std::cout << "finish material loading!" << endl;
@@ -392,11 +417,62 @@ void LoadModel(vector<MyMesh>& shapes, string filePath, uint start_mesh, uint en
 			indices.push_back(mesh->mFaces[f].mIndices[2]);
 		}
 
+		// Compute tangent
+		//float* tangents = new float[normals.size()];
+		vector<float> tangents(normals.size(), 0.0f);
+		for (unsigned int i = 0; i < indices.size(); i += 3) {
+			int idx0 = indices[i];
+			int idx1 = indices[i + 1];
+			int idx2 = indices[i + 2];
+
+			vec3 p1(vertices[idx0 * 3 + 0], vertices[idx0 * 3 + 1], vertices[idx0 * 3 + 2]);
+			vec3 p2(vertices[idx1 * 3 + 0], vertices[idx1 * 3 + 1], vertices[idx1 * 3 + 2]);
+			vec3 p3(vertices[idx2 * 3 + 0], vertices[idx2 * 3 + 1], vertices[idx2 * 3 + 2]);
+
+			vec3 n1(normals[idx0 * 3 + 0], normals[idx0 * 3 + 1], normals[idx0 * 3 + 2]);
+			vec3 n2(normals[idx1 * 3 + 0], normals[idx1 * 3 + 1], normals[idx1 * 3 + 2]);
+			vec3 n3(normals[idx2 * 3 + 0], normals[idx2 * 3 + 1], normals[idx2 * 3 + 2]);
+
+			vec2 uv1(texcoords[idx0 * 2 + 0], texcoords[idx0 * 2 + 1]);
+			vec2 uv2(texcoords[idx1 * 2 + 0], texcoords[idx1 * 2 + 1]);
+			vec2 uv3(texcoords[idx2 * 2 + 0], texcoords[idx2 * 2 + 1]);
+
+			vec3 dp1 = p2 - p1;
+			vec3 dp2 = p3 - p1;
+
+			vec2 duv1 = uv2 - uv1;
+			vec2 duv2 = uv3 - uv1;
+
+			float r = 1.0f / (duv1[0] * duv2[1] - duv1[1] * duv2[0]);
+
+			vec3 t;
+			t[0] = (dp1[0] * duv2[1] - dp2[0] * duv1[1]) * r;
+			t[1] = (dp1[1] * duv2[1] - dp2[1] * duv1[1]) * r;
+			t[2] = (dp1[2] * duv2[1] - dp2[2] * duv1[1]) * r;
+
+			vec3 t1 = glm::cross(n1, t);
+			vec3 t2 = glm::cross(n2, t);
+			vec3 t3 = glm::cross(n3, t);
+
+			tangents[idx0 * 3 + 0] += t1[0];
+			tangents[idx0 * 3 + 1] += t1[1];
+			tangents[idx0 * 3 + 2] += t1[2];
+
+			tangents[idx1 * 3 + 0] += t2[0];
+			tangents[idx1 * 3 + 1] += t2[1];
+			tangents[idx1 * 3 + 2] += t2[2];
+
+			tangents[idx2 * 3 + 0] += t3[0];
+			tangents[idx2 * 3 + 1] += t3[1];
+			tangents[idx2 * 3 + 2] += t3[2];
+		}
+
 		glBindVertexArray(shape.vao);
 
 		glGenBuffers(1, &shape.vbo_position);
 		glGenBuffers(1, &shape.vbo_normal);
 		glGenBuffers(1, &shape.vbo_texcoord);
+		glGenBuffers(1, &shape.vbo_tangent);
 		glGenBuffers(1, &shape.ibo);
 
 		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_position);
@@ -414,12 +490,27 @@ void LoadModel(vector<MyMesh>& shapes, string filePath, uint start_mesh, uint en
 		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(2);
 
+		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_tangent);
+		glBufferData(GL_ARRAY_BUFFER, tangents.size() * sizeof(GL_FLOAT), tangents.data(), GL_STATIC_DRAW);
+		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(3);
+		//delete tangents;
+
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.ibo);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GL_UNSIGNED_INT), indices.data(), GL_STATIC_DRAW);
 
 		int materialID = mesh->mMaterialIndex;
 		shape.drawCount = mesh->mNumFaces * 3;
 		shape.material = materials[materialID];
+
+		/* DEBUG: check normal map is used or not
+		aiMaterial* material = scene->mMaterials[materialID];
+		aiString materialName;
+		material->Get(AI_MATKEY_NAME, materialName);
+		std::cout << "Material " << i << " name: " << materialName.C_Str() << std::endl;
+		cout << "Normap: " << shape.material.useNormalMap << endl;
+		*/
+
 		shapes.push_back(shape);
 	}
 
