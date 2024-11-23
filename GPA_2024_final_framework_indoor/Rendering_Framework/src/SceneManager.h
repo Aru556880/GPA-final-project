@@ -46,6 +46,7 @@ public:
 	GLenum m_albedoTexUnit;
 	GLenum m_normalTexUnit;
 
+	GLuint m_useNormalMapHandle;
 
 	int m_albedoMapTexIdx;
 	int m_normalMapTexIdx;

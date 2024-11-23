@@ -22,7 +22,7 @@ public:
 private:
 	bool setShaderProgram(ShaderProgram*& shaderProgram,string vs, string fs);
 	void setUniforms();
-	void default_update();
+
 	void deferred_update();
 	void shadowmap_update();
 
@@ -62,6 +62,9 @@ private:
 		GLuint ambient_map;
 		GLuint diffuse_map;
 		GLuint specular_map;
+		GLuint tangent_map;
+		GLuint normalTex_map; // texture of normal mapping, set vec3(0) if not used
+
 		GLuint depth_map;
 		GLuint vao;
 	} gbuffer;

@@ -3,13 +3,14 @@
 layout (location = 0) in vec3 position;   
 layout (location = 1) in vec3 normal;     
 layout (location = 2) in vec2 texcoord;	 
-layout (location = 3) in vec2 tangent;	 
+layout (location = 3) in vec3 tangent;	
 	                                      
 out VS_OUT	                              
 {	                                      
     vec3 position;                        
-    vec3 normal;	                      
-    vec2 texcoord;	                      
+    vec3 normal;	
+	vec3 tangent;
+    vec2 texcoord;	 
 } vs_out;	                              
 	                                      
 
@@ -25,5 +26,6 @@ void main(){
 	gl_Position = projMat * mv_matrix * P;	                    
 	vs_out.position = (modelMat* P).xyz;	            
 	vs_out.normal = normalize(mat3(modelMat) * normal);	
+	vs_out.tangent = tangent;
 	vs_out.texcoord = texcoord;	  
 }

@@ -31,6 +31,7 @@ in VS_OUT
 	vec3 normal;
 	vec3 lightDir;
 	vec3 eyeDir;
+	vec3 t;
 } fs_in;
 
 vec3 Ia = vec3(0.1, 0.1, 0.1);
@@ -94,6 +95,5 @@ void main(){
 	vec4 shadingColor = vec4( diffuse + specular, 1.0);
 	
 	fragColor = textureProj(shadow_tex, fs_in.shadow_coord) * shadingColor ;
-
-	//fragColor = shadingColor;
+	fragColor = vec4(fs_in.t, 1.0);
 }

@@ -99,6 +99,8 @@ bool SceneRenderer::setUpShader(){
 	manager->m_diffuseAlbedoHandle = 14;
 	manager->m_specularAlbedoHandle = 15;
 	manager->m_shininessHandle = 16;
+
+	manager->m_useNormalMapHandle = 20;
 	
 	return true;
 }

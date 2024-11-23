@@ -33,6 +33,7 @@ out VS_OUT
 	vec3 normal;
 	vec3 lightDir;
 	vec3 eyeDir;
+	vec3 t;
 } vs_out;
 
 /*
@@ -65,16 +66,18 @@ void main(){
 
 	vec4 viewVertex = mv_matrix * position ;
 	vec4 light_pos_view = viewMat * vec4(lightPos, 1.0);
-
+	
 	vec3 V = viewVertex.xyz;                               
     vec3 N = normalize(mat3(mv_matrix) * v_normal); 
     vec3 T = normalize(mat3(mv_matrix) * v_tangent);
 	vec3 B = cross(N, T);
 	vec3 L = light_pos_view.xyz - viewVertex.xyz;
-
+	
 	vs_out.lightDir = normalize(vec3(dot(L, T), dot(L, B), dot(L, N)));
 	V = -viewVertex.xyz;  
-	
+
+	vs_out.t = (viewMat * vec4(1.0, 0.0, 0.0, 0.0)).xyz;
+
     vs_out.eyeDir = normalize(vec3(dot(V, T), dot(V, B), dot(V, N)));     
     vs_out.texcoord = v_uv;                                                                                                                                               
     vs_out.normal = N;                                                    

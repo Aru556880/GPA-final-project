@@ -272,7 +272,7 @@ texture_data loadImg(const char* path)
 void LoadMeshModel(vector<MyMesh>& shapes, string filePath, uint start_mesh, uint end_mesh) {
 	const aiScene* scene;
 
-	scene = aiImportFile(filePath.c_str(), aiProcess_Triangulate | aiProcess_GenNormals);
+	scene = aiImportFile(filePath.c_str(), aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_CalcTangentSpace);
 
 	if (!scene)
 	{
@@ -382,7 +382,7 @@ void LoadMeshModel(vector<MyMesh>& shapes, string filePath, uint start_mesh, uin
 		MyMesh shape;
 		glGenVertexArrays(1, &shape.vao);
 
-		vector<float> vertices, texcoords, normals;
+		vector<float> vertices, texcoords, normals, mytangent;
 		vector<unsigned int> indices;
 		//cout << i << " vertex: " << mesh->mNumVertices << endl;
 		for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
@@ -407,6 +407,10 @@ void LoadMeshModel(vector<MyMesh>& shapes, string filePath, uint start_mesh, uin
 				texcoords.push_back(0.0f);
 				texcoords.push_back(0.0f);
 			}
+
+			mytangent.push_back(mesh->mTangents[i].x);
+			mytangent.push_back(mesh->mTangents[i].y);
+			mytangent.push_back(mesh->mTangents[i].z);
 		}
 
 		// create 1 ibo to hold data
@@ -491,7 +495,7 @@ void LoadMeshModel(vector<MyMesh>& shapes, string filePath, uint start_mesh, uin
 		glEnableVertexAttribArray(2);
 
 		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_tangent);
-		glBufferData(GL_ARRAY_BUFFER, tangents.size() * sizeof(GL_FLOAT), tangents.data(), GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, mytangent.size() * sizeof(GL_FLOAT), mytangent.data(), GL_STATIC_DRAW);
 		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(3);
 		//delete tangents;
