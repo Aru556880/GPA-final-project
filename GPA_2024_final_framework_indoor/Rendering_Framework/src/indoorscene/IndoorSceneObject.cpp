@@ -63,7 +63,6 @@ bool IndoorSceneObject::deferred_init(){
 	// initial geometry buffer
 	glGenFramebuffers(1, &gbuffer.fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, gbuffer.fbo);
-
 	glGenTextures(8, &gbuffer.position_map);
 
 	glBindTexture(GL_TEXTURE_2D, gbuffer.position_map);
@@ -221,6 +220,7 @@ void IndoorSceneObject::resize(int w, int h) {
 
 void IndoorSceneObject::update(){
 
+	this->shadowmap_update();
 	this->deferred_update();
 }
 
@@ -235,6 +235,7 @@ void IndoorSceneObject::deferred_update() {
 			GL_COLOR_ATTACHMENT6 };
 
 	glDrawBuffers(7, draw_buffers);
+	glClearColor(1.0,1.0,1.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	m_geometryProgram->useProgram();
@@ -287,7 +288,9 @@ void IndoorSceneObject::deferred_update() {
 	// deferred shading type
 	glUniform1i(21, 5);
 
+	// matrix
 	glUniformMatrix4fv(SceneManager::Instance()->m_viewMatHandle, 1, false, glm::value_ptr(this->m_viewMat));
+	glUniformMatrix4fv(SceneManager::Instance()->m_shadowMatHandle, 1, false, glm::value_ptr(this->m_shadow_sbpv_matrix));
 
 	// light position
 	glUniform3fv(SceneManager::Instance()->m_lightPositionHandle, 1, value_ptr(SceneManager::Instance()->light_position));
@@ -314,6 +317,9 @@ void IndoorSceneObject::deferred_update() {
 	glActiveTexture(GL_TEXTURE6);
 	glBindTexture(GL_TEXTURE_2D, gbuffer.normalTex_map);
 
+	glActiveTexture(GL_TEXTURE7);
+	glBindTexture(GL_TEXTURE_2D, shadowmap.depth_tex);
+
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
 }
@@ -330,7 +336,7 @@ void IndoorSceneObject::shadowmap_update(){
 	mat4 light_view_matrix = lookAt(light_position, light_lookCenter, vec3(0.0f, 1.0f, 0.0f));
 	mat4 light_vp_matrix = light_proj_matrix * light_view_matrix;
 
-	mat4 shadow_sbpv_matrix = scale_bias_matrix * light_vp_matrix;
+	m_shadow_sbpv_matrix = scale_bias_matrix * light_vp_matrix;
 
 	glEnable(GL_DEPTH_TEST);
 	
@@ -362,13 +368,13 @@ void IndoorSceneObject::shadowmap_update(){
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glViewport(0, 0, m_window_width, m_window_height);
+}
 
-	// shading pass
-	
+void IndoorSceneObject::shadowmap_draw() {
 	m_blinnphongProgram->useProgram();
 	glUniformMatrix4fv(SceneManager::Instance()->m_projMatHandle, 1, false, glm::value_ptr(this->m_projMat));
 	glUniformMatrix4fv(SceneManager::Instance()->m_viewMatHandle, 1, false, glm::value_ptr(this->m_viewMat));
-	
+
 	mat4 shadow_matrix = mat4(1.0);
 
 	glUniform1i(20, -1);
@@ -376,7 +382,7 @@ void IndoorSceneObject::shadowmap_update(){
 
 		glBindVertexArray(m_roomMeshes[i].vao);
 
-		shadow_matrix = shadow_sbpv_matrix * m_roomMeshes[i].m_modelMat;
+		shadow_matrix = m_shadow_sbpv_matrix * m_roomMeshes[i].m_modelMat;
 		glUniformMatrix4fv(SceneManager::Instance()->m_shadowMatHandle, 1, false, glm::value_ptr(shadow_matrix));
 
 		glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(m_roomMeshes[i].m_modelMat));
@@ -401,7 +407,7 @@ void IndoorSceneObject::shadowmap_update(){
 
 		glBindVertexArray(m_triceMeshes[i].vao);
 
-		shadow_matrix = shadow_sbpv_matrix * m_triceMeshes[i].m_modelMat;
+		shadow_matrix = m_shadow_sbpv_matrix * m_triceMeshes[i].m_modelMat;
 		glUniformMatrix4fv(SceneManager::Instance()->m_shadowMatHandle, 1, false, glm::value_ptr(shadow_matrix));
 
 
@@ -424,7 +430,6 @@ void IndoorSceneObject::shadowmap_update(){
 
 		glDrawElements(GL_TRIANGLES, m_triceMeshes[i].drawCount, GL_UNSIGNED_INT, nullptr);
 	}
-
 }
 
 namespace DEFERRED_MAP_TYPE {

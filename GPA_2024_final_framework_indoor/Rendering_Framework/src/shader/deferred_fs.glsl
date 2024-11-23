@@ -10,11 +10,12 @@ layout (binding = 4) uniform sampler2D specular_map;
 layout (binding = 5) uniform sampler2D tangent_map;    // tangent is in view space
 
 layout(binding = 6) uniform sampler2D normalTexture_map; // normal mapping texture
-//layout (binding = 7) uniform sampler2DShadow shadow_map;
+layout (binding = 7) uniform sampler2DShadow shadow_map;
 
 
 
 layout(location = 1) uniform mat4 viewMat ;
+layout(location = 3) uniform mat4 shadow_matrix;
 layout(location = 11) uniform vec3 light_pos_world;
 
 layout(location = 21) uniform int deferred_map_type;
@@ -46,10 +47,9 @@ void main(){
     vec4 light_pos_view = viewMat * vec4(light_pos_world, 1.0);
 	vec3 N = normalize(mat3(viewMat) * world_normal);
 
-    // A wired thing I found: If I normalize tangnet in geometry_vs, then normalizing it again here
-    // I will obtain a different result...also mutiplying view matrix there and here are also diffetent
-    // Multiplying view matrix here will obtain wrong result as well.
-    vec3 T = normalize(mat3(viewMat) * world_tangent);
+    // This tangent is a bug, cannot figure out what's wrong
+    vec3 T = world_tangent;
+    
 
 	vec3 L = normalize(light_pos_view.xyz - viewVertex.xyz);
     vec3 B = cross(N, T);
@@ -72,8 +72,16 @@ void main(){
 	    diffuse = Id * max(dot(N_t, L_t), 0) * Kd;
 	    specular = Is * pow(max(dot(N_t, H_t), 0), shininess) * Ks;
     }
+    else{
+        vec3 diffuse = Id * max(dot(N, L), 0) * Kd;
+	    vec3 specular = Is * pow(max(dot(N, H), 0), shininess) * Ks;
+    }
 
 	vec3 shadingColor = ambient*0.1 + diffuse + specular;
+
+
+    vec4 shadow_coord = shadow_matrix * vec4(world_position, 1.0);
+    vec3 shadow_color = textureProj(shadow_map, shadow_coord) * shadingColor;
 
 	vec3 color;
 	switch (deferred_map_type) {
@@ -95,8 +103,8 @@ void main(){
         case 5:
             color = shadingColor;
             break;
-        case 6: //DEBUG
-            color = normalize(T); 
+        case 6: 
+            color = shadow_color; 
             break;
         default:
             color = vec3(1.0);

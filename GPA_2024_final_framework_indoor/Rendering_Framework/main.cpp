@@ -272,7 +272,7 @@ texture_data loadImg(const char* path)
 void LoadMeshModel(vector<MyMesh>& shapes, string filePath, uint start_mesh, uint end_mesh) {
 	const aiScene* scene;
 
-	scene = aiImportFile(filePath.c_str(), aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_CalcTangentSpace);
+	scene = aiImportFile(filePath.c_str(), aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_CalcTangentSpace);
 
 	if (!scene)
 	{

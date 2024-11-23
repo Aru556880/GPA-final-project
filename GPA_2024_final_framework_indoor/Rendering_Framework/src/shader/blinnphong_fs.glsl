@@ -95,5 +95,5 @@ void main(){
 	vec4 shadingColor = vec4( diffuse + specular, 1.0);
 	
 	fragColor = textureProj(shadow_tex, fs_in.shadow_coord) * shadingColor ;
-	fragColor = vec4(fs_in.t, 1.0);
+	//fragColor = vec4(fs_in.t, 1.0);
 }

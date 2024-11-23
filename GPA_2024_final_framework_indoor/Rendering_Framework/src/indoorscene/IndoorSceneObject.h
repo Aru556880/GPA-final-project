@@ -25,6 +25,7 @@ private:
 
 	void deferred_update();
 	void shadowmap_update();
+	void shadowmap_draw();
 
 	bool deferred_init();
 	bool shadowmap_init();
@@ -41,9 +42,9 @@ private:
 	vector<MyMesh> m_triceMeshes;
 
 	mat4 m_modelMat = mat4(1.0);
-	mat4 m_projMat = mat4(1.0);;
-	mat4 m_viewMat = mat4(1.0);;
-	
+	mat4 m_projMat = mat4(1.0);
+	mat4 m_viewMat = mat4(1.0);
+	mat4 m_shadow_sbpv_matrix = mat4(1.0);
 
 	// deferred programs
 	ShaderProgram* m_geometryProgram;
