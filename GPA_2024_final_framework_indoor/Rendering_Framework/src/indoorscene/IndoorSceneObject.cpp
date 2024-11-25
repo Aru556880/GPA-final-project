@@ -3,6 +3,8 @@
 #include <iostream>
 #include <string>
 #define SHADOW_MAP_SIZE 4096
+#define SHADOW_WIDTH 1024 
+#define SHADOW_HEIGHT 1024
 
 GLuint test;
 using std::cout;
@@ -55,8 +57,8 @@ bool IndoorSceneObject::init() {
 /////////////////////////////////////////////////////////
 bool IndoorSceneObject::deferred_init(){
 	bool flag = true;
-	flag &= setShaderProgram(m_deferredProgram, "deferred_vs.glsl", "deferred_fs.glsl");
-	flag &= setShaderProgram(m_geometryProgram, "geometry_vs.glsl", "geometry_fs.glsl");
+	flag &= setShaderProgram(m_deferredProgram, "deferred_vs.glsl", "" ,"deferred_fs.glsl");
+	flag &= setShaderProgram(m_geometryProgram, "geometry_vs.glsl", "", "geometry_fs.glsl");
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
 
@@ -126,33 +128,61 @@ bool IndoorSceneObject::shadowmap_init()
 {
 	bool flag = true;
 
-	flag &= setShaderProgram(m_depthProgram, "depth_vs.glsl", "depth_fs.glsl");
-	flag &= setShaderProgram(m_blinnphongProgram, "blinnphong_vs.glsl", "blinnphong_fs.glsl");
+	// directional light shadow map
+	flag &= setShaderProgram(m_dirLightShadowProgram, "depth_vs.glsl", "", "depth_fs.glsl");
+	flag &= setShaderProgram(m_blinnphongProgram, "blinnphong_vs.glsl", "", "blinnphong_fs.glsl");
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
 
-	glGenFramebuffers(1, &shadowmap.depth_fbo);
-	glBindFramebuffer(GL_FRAMEBUFFER, shadowmap.depth_fbo);
+	glGenFramebuffers(1, &dirLight_shadowmap.depth_fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, dirLight_shadowmap.depth_fbo);
 
-	glGenTextures(1, &shadowmap.depth_tex);
-	glBindTexture(GL_TEXTURE_2D, shadowmap.depth_tex);
+	glGenTextures(1, &dirLight_shadowmap.depth_tex);
+	glBindTexture(GL_TEXTURE_2D, dirLight_shadowmap.depth_tex);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadowmap.depth_tex, 0);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, dirLight_shadowmap.depth_tex, 0);
 	
-	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		return false;
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "Framebuffer not complete!" << std::endl;
 
+	// ====================================================
+	// point light shadow map
+	flag &= setShaderProgram(m_pointLightShadowProgram, "cubedepth_vs.glsl", "cubedepth_gs.glsl", "cubedepth_fs.glsl");
+
+	glGenTextures(1, &pointLight_shadowmap.depth_cubeMap);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, pointLight_shadowmap.depth_cubeMap);
+	for (GLuint i = 0; i < 6; ++i)
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT,
+			SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	glGenFramebuffers(1, &pointLight_shadowmap.depth_fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, pointLight_shadowmap.depth_fbo);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, pointLight_shadowmap.depth_cubeMap, 0);
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "Framebuffer not complete!" << std::endl;
+
+	// end of shadow maps initialization ===========================================
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	return flag;
 }
 
-bool IndoorSceneObject::setShaderProgram(ShaderProgram*& m_shaderProgram, string vs, string fs)
+// if no geometry shader, just pass an empty string
+bool IndoorSceneObject::setShaderProgram(ShaderProgram*& m_shaderProgram, string vs,string gs, string fs)
 {
 	// initialize shader program
 	// vertex shader
@@ -160,6 +190,14 @@ bool IndoorSceneObject::setShaderProgram(ShaderProgram*& m_shaderProgram, string
 	Shader* vsShader = new Shader(GL_VERTEX_SHADER);
 	vsShader->createShaderFromFile("src\\shader\\" + vs);
 	std::cout << vsShader->shaderInfoLog() << "\n";
+
+	Shader* gsShader = new Shader(GL_GEOMETRY_SHADER);
+	// geometry shader
+	if (gs != "") {
+		cout << "Shader: " + gs << endl;
+		gsShader->createShaderFromFile("src\\shader\\" + gs);
+		std::cout << gsShader->shaderInfoLog() << "\n";
+	}
 
 	// fragment shader
 	cout << "Shader: " + fs << endl;
@@ -171,7 +209,9 @@ bool IndoorSceneObject::setShaderProgram(ShaderProgram*& m_shaderProgram, string
 	ShaderProgram* shaderProgram = new ShaderProgram();
 	shaderProgram->init();
 	shaderProgram->attachShader(vsShader);
+	shaderProgram->attachShader(gsShader);
 	shaderProgram->attachShader(fsShader);
+
 	shaderProgram->checkStatus();
 	if (shaderProgram->status() != ShaderProgramStatus::READY) {
 		return false;
@@ -181,9 +221,11 @@ bool IndoorSceneObject::setShaderProgram(ShaderProgram*& m_shaderProgram, string
 
 	vsShader->releaseShader();
 	fsShader->releaseShader();
+	gsShader->releaseShader();
 
 	delete vsShader;
 	delete fsShader;
+	delete gsShader;
 
 	return true;
 }
@@ -226,8 +268,8 @@ void IndoorSceneObject::update(){
 
 
 void IndoorSceneObject::deferred_update() {
-	// geometry pass:
 
+	// geometry pass:
 	glBindFramebuffer(GL_FRAMEBUFFER, gbuffer.fbo);
 	const GLenum draw_buffers[] = 
 		{   GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, 
@@ -235,9 +277,9 @@ void IndoorSceneObject::deferred_update() {
 			GL_COLOR_ATTACHMENT6 };
 
 	glDrawBuffers(7, draw_buffers);
-	glClearColor(1.0,1.0,1.0, 1.0);
+	
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+	glClearColor(1.0,1.0,1.0, 1.0);
 	m_geometryProgram->useProgram();
 
 	glUniformMatrix4fv(SceneManager::Instance()->m_projMatHandle, 1, false, glm::value_ptr(this->m_projMat));
@@ -286,7 +328,7 @@ void IndoorSceneObject::deferred_update() {
 	glBindVertexArray(gbuffer.vao);
 
 	// deferred shading type
-	glUniform1i(21, 5);
+	glUniform1i(21, 7);
 
 	// matrix
 	glUniformMatrix4fv(SceneManager::Instance()->m_viewMatHandle, 1, false, glm::value_ptr(this->m_viewMat));
@@ -294,7 +336,7 @@ void IndoorSceneObject::deferred_update() {
 
 	// light position
 	glUniform3fv(SceneManager::Instance()->m_lightPositionHandle, 1, value_ptr(SceneManager::Instance()->light_position));
-
+	
 	// gbuffer texture
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, gbuffer.position_map);
@@ -318,7 +360,10 @@ void IndoorSceneObject::deferred_update() {
 	glBindTexture(GL_TEXTURE_2D, gbuffer.normalTex_map);
 
 	glActiveTexture(GL_TEXTURE7);
-	glBindTexture(GL_TEXTURE_2D, shadowmap.depth_tex);
+	glBindTexture(GL_TEXTURE_2D, dirLight_shadowmap.depth_tex);
+
+	glActiveTexture(GL_TEXTURE8);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, pointLight_shadowmap.depth_cubeMap);
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
@@ -326,8 +371,11 @@ void IndoorSceneObject::deferred_update() {
 
 void IndoorSceneObject::shadowmap_update(){
 	
+	vec3 light_position = SceneManager::Instance()->light_position;
+	// ====================================================
+	// directional light shadow map
+
 	const float shadow_range = 10.0f;
-	vec3 light_position = vec3(-2.845f, 2.028f, -1.293f);
 	vec3 light_lookCenter = vec3(0.542f, -0.141f, -0.422f);
 	mat4 scale_bias_matrix =
 		translate(mat4(1.0f), vec3(0.5f, 0.5f, 0.5f)) * scale(mat4(1.0f), vec3(0.5f, 0.5f, 0.5f));
@@ -341,30 +389,76 @@ void IndoorSceneObject::shadowmap_update(){
 	glEnable(GL_DEPTH_TEST);
 	
 	// shadow map pass
-	m_depthProgram->useProgram();
-	glBindFramebuffer(GL_FRAMEBUFFER, shadowmap.depth_fbo);
+	m_dirLightShadowProgram->useProgram();
+	glBindFramebuffer(GL_FRAMEBUFFER, dirLight_shadowmap.depth_fbo);
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
 	glEnable(GL_POLYGON_OFFSET_FILL);
 	glPolygonOffset(4.0f, 4.0f);
 	
-	shadowmap.light_mvp = 0;
-	glUniformMatrix4fv(shadowmap.light_mvp, 1, GL_FALSE, value_ptr(light_vp_matrix * this->m_modelMat));
+	dirLight_shadowmap.light_mvp = 0;
+	glUniformMatrix4fv(dirLight_shadowmap.light_mvp, 1, GL_FALSE, value_ptr(light_vp_matrix * this->m_modelMat));
 	
 	for (int i = 0;i < m_roomMeshes.size();++i) {
-		glUniformMatrix4fv(shadowmap.light_mvp, 1, GL_FALSE, value_ptr(light_vp_matrix * m_roomMeshes[i].m_modelMat));
+		glUniformMatrix4fv(dirLight_shadowmap.light_mvp, 1, GL_FALSE, value_ptr(light_vp_matrix * m_roomMeshes[i].m_modelMat));
 		glBindVertexArray(m_roomMeshes[i].vao);
 		glDrawElements(GL_TRIANGLES, m_roomMeshes[i].drawCount, GL_UNSIGNED_INT, nullptr);
 	}
 
 	for (int i = 0;i < m_triceMeshes.size();++i) {
-		glUniformMatrix4fv(shadowmap.light_mvp, 1, GL_FALSE, value_ptr(light_vp_matrix * m_triceMeshes[i].m_modelMat));
+		glUniformMatrix4fv(dirLight_shadowmap.light_mvp, 1, GL_FALSE, value_ptr(light_vp_matrix * m_triceMeshes[i].m_modelMat));
 		glBindVertexArray(m_triceMeshes[i].vao);
 		glDrawElements(GL_TRIANGLES, m_triceMeshes[i].drawCount, GL_UNSIGNED_INT, nullptr);
 	}
 
 	glDisable(GL_POLYGON_OFFSET_FILL);
 	
+	// ====================================================
+	// point light shadow map
+	m_pointLightShadowProgram->useProgram();
+	glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+	glBindFramebuffer(GL_FRAMEBUFFER, pointLight_shadowmap.depth_fbo);
+	//glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glClear(GL_DEPTH_BUFFER_BIT);
+
+	GLfloat aspect = (GLfloat)SHADOW_WIDTH / (GLfloat)SHADOW_HEIGHT;
+	GLfloat near = 0.22f;
+	GLfloat far = 10.0f;
+	mat4 shadowProj = perspective(radians(90.0f), aspect, near, far);
+
+	std::vector<glm::mat4> shadowTransforms;
+	shadowTransforms.push_back(shadowProj *
+		lookAt(light_position, light_position + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+	shadowTransforms.push_back(shadowProj *
+		lookAt(light_position, light_position + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+	shadowTransforms.push_back(shadowProj *
+		lookAt(light_position, light_position + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
+	shadowTransforms.push_back(shadowProj *
+		lookAt(light_position, light_position + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
+	shadowTransforms.push_back(shadowProj *
+		lookAt(light_position, light_position + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
+	shadowTransforms.push_back(shadowProj *
+		lookAt(light_position, light_position + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
+
+	for (GLuint i = 0; i < 6; ++i)
+		glUniformMatrix4fv(glGetUniformLocation(m_pointLightShadowProgram->programId(), ("shadowMatrices[" + std::to_string(i) + "]").c_str()), 1, GL_FALSE, glm::value_ptr(shadowTransforms[i]));
+
+	glUniform3fv(SceneManager::Instance()->m_lightPositionHandle, 1, value_ptr(light_position));
+	glUniform1f(SceneManager::Instance()->m_farPlaneHandle, far);
+
+	for (int i = 0;i < m_roomMeshes.size();++i) {
+		glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(m_roomMeshes[i].m_modelMat));
+		glBindVertexArray(m_roomMeshes[i].vao);
+		glDrawElements(GL_TRIANGLES, m_roomMeshes[i].drawCount, GL_UNSIGNED_INT, nullptr);
+	}
+
+	for (int i = 0;i < m_triceMeshes.size();++i) {
+		glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(m_triceMeshes[i].m_modelMat));
+		glBindVertexArray(m_triceMeshes[i].vao);
+		glDrawElements(GL_TRIANGLES, m_triceMeshes[i].drawCount, GL_UNSIGNED_INT, nullptr);
+	}
+
+	// End ===================================================
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glViewport(0, 0, m_window_width, m_window_height);
@@ -391,7 +485,7 @@ void IndoorSceneObject::shadowmap_draw() {
 		glBindTexture(GL_TEXTURE_2D, m_roomMeshes[i].material.diffuse_tex);
 
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, shadowmap.depth_tex);
+		glBindTexture(GL_TEXTURE_2D, dirLight_shadowmap.depth_tex);
 
 		glUniform3fv(SceneManager::Instance()->m_lightPositionHandle, 1, value_ptr(SceneManager::Instance()->light_position));
 		glUniform3fv(SceneManager::Instance()->m_ambientAlbedoHandle, 1, value_ptr(m_roomMeshes[i].material.Ka));
@@ -417,7 +511,7 @@ void IndoorSceneObject::shadowmap_draw() {
 		glBindTexture(GL_TEXTURE_2D, m_triceMeshes[i].material.diffuse_tex);
 
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, shadowmap.depth_tex);
+		glBindTexture(GL_TEXTURE_2D, dirLight_shadowmap.depth_tex);
 
 		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, m_triceMeshes[i].material.normalmap_tex);

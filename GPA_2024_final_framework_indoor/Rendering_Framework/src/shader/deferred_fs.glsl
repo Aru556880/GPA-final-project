@@ -10,14 +10,15 @@ layout (binding = 4) uniform sampler2D specular_map;
 layout (binding = 5) uniform sampler2D tangent_map;    // tangent is in view space
 
 layout(binding = 6) uniform sampler2D normalTexture_map; // normal mapping texture
-layout (binding = 7) uniform sampler2DShadow shadow_map;
+layout (binding = 7) uniform sampler2DShadow dirLightShadow_map;
+layout (binding = 8) uniform samplerCube  pointLightShadow_map;
 
 
 
 layout(location = 1) uniform mat4 viewMat ;
 layout(location = 3) uniform mat4 shadow_matrix;
 layout(location = 11) uniform vec3 light_pos_world;
-
+layout(location = 18) uniform float far_plane;
 layout(location = 21) uniform int deferred_map_type;
 
 in VS_OUT                                                                   
@@ -30,6 +31,8 @@ vec3 Id = vec3(0.7, 0.7, 0.7);
 vec3 Is = vec3(0.2, 0.2, 0.2);
 
 float shininess = 225.0;
+
+float PointLightShadowCalculation(vec3 fragPos);
 
 void main(){
 	vec3 world_position = texture(position_map, fs_in.texcoord).rgb;
@@ -51,7 +54,9 @@ void main(){
     vec3 T = world_tangent;
     
 
-	vec3 L = normalize(light_pos_view.xyz - viewVertex.xyz);
+	vec3 L = light_pos_view.xyz - viewVertex.xyz;
+    float distance = length(L);
+    L = normalize(L);
     vec3 B = cross(N, T);
     vec3 V = normalize(- viewVertex.xyz);
     vec3 H = normalize(L + V);
@@ -79,9 +84,16 @@ void main(){
 
 	vec3 shadingColor = ambient*0.1 + diffuse + specular;
 
+    // point light color:
+    float c1 = 1.0;
+    float c2 = 0.7;
+    float c3 = 0.14;
+
+    float f_a = min( 1/(c1 + c2 * distance + c3 * distance * distance), 1.0 );
+    vec3 pointLight_color = ambient*0.1 + (diffuse + specular) * f_a;
 
     vec4 shadow_coord = shadow_matrix * vec4(world_position, 1.0);
-    vec3 shadow_color = textureProj(shadow_map, shadow_coord) * shadingColor;
+    vec3 shadow_color = textureProj(dirLightShadow_map, shadow_coord) * shadingColor;
 
 	vec3 color;
 	switch (deferred_map_type) {
@@ -106,6 +118,11 @@ void main(){
         case 6: 
             color = shadow_color; 
             break;
+        case 7:
+            float shadow = PointLightShadowCalculation(world_position);    
+            //color =  vec3(shadow); //DEBUG;
+            color = (1.0-shadow) * pointLight_color ;
+            break;
         default:
             color = vec3(1.0);
             break;
@@ -114,3 +131,26 @@ void main(){
 
     frag_color = vec4(color,1.0);
 }
+
+float PointLightShadowCalculation(vec3 fragPos)
+{
+    // Get vector between fragment position and light position
+    vec3 fragToLight = fragPos - light_pos_world;
+
+    // Use the light to fragment vector to sample from the depth map    
+    float closestDepth = texture(pointLightShadow_map, fragToLight).r;
+    //return closestDepth ;
+    
+    // It is currently in linear range between [0,1]. Re-transform back to original value
+    closestDepth *= 10.0;
+
+    // Now get current linear depth as the length between the fragment and light position
+    float currentDepth = length(fragToLight);
+    //return currentDepth / 10.0;
+    // Now test for shadows
+    float bias = 0.05; 
+    float shadow = currentDepth -  bias > closestDepth ? 1.0 : 0.0;
+
+    return shadow;
+}
+

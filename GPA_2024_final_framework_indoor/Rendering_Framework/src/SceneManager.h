@@ -48,12 +48,15 @@ public:
 
 	GLuint m_useNormalMapHandle;
 
+	GLuint m_shadowMatricesHandle;
+	GLuint m_farPlaneHandle;
+
 	int m_albedoMapTexIdx;
 	int m_normalMapTexIdx;
 
 
 	float m_test_meshcount = 0;
-	glm::vec3 light_position = glm::vec3(-2.845, 2.028, -1.293);
-
+	//glm::vec3 light_position = glm::vec3(-2.845, 2.028, -1.293);
+	glm::vec3 light_position = glm::vec3(1.87659, 0.4625, 0.103928);
 };
 

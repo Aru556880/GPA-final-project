@@ -100,6 +100,9 @@ bool SceneRenderer::setUpShader(){
 	manager->m_specularAlbedoHandle = 15;
 	manager->m_shininessHandle = 16;
 
+	manager->m_shadowMatricesHandle = 17;
+	manager->m_farPlaneHandle = 18;
+
 	manager->m_useNormalMapHandle = 20;
 	
 	return true;

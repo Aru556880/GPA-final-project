@@ -20,12 +20,13 @@ public:
 		m_projMat = projMat;
 	}
 private:
-	bool setShaderProgram(ShaderProgram*& shaderProgram,string vs, string fs);
+	// if no geometry shader, just pass an empty string
+	bool setShaderProgram(ShaderProgram*& shaderProgram,string vs,string gs, string fs);
 	void setUniforms();
 
 	void deferred_update();
 	void shadowmap_update();
-	void shadowmap_draw();
+	void shadowmap_draw(); //discarded now, shadowmap is now in deferred shader
 
 	bool deferred_init();
 	bool shadowmap_init();
@@ -47,11 +48,13 @@ private:
 	mat4 m_shadow_sbpv_matrix = mat4(1.0);
 
 	// deferred programs
-	ShaderProgram* m_geometryProgram;
+	ShaderProgram* m_geometryProgram; // calculate geometry properties, don't confuse with geometry shader(xxx_gs)
 	ShaderProgram* m_deferredProgram;
 
 	// shadow mapping programs
-	ShaderProgram* m_depthProgram;
+	ShaderProgram* m_dirLightShadowProgram;
+	ShaderProgram* m_pointLightShadowProgram;
+
 	ShaderProgram* m_blinnphongProgram;
 
 	// deferred program variables
@@ -71,7 +74,7 @@ private:
 	} gbuffer;
 	// ===============================
 
-	// shadow mapping program variables
+	// directional shadow mapping program variables
 	struct {
 
 		mat4 light_view_matrix;
@@ -82,10 +85,16 @@ private:
 		GLuint depth_fbo;
 		GLuint depth_tex;
 	
-	}shadowmap;
+	}dirLight_shadowmap;
 	// ===============================
 
+	struct {
+		GLfloat far_plane;
+		GLfloat near_plane;
+		GLuint depth_fbo;
+		GLuint depth_cubeMap;
 
+	}pointLight_shadowmap;
 
 };
 

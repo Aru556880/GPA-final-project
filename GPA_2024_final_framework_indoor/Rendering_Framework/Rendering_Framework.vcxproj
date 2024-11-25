@@ -59,6 +59,9 @@
   <ItemGroup>
     <None Include="src\shader\blinnphong_fs.glsl" />
     <None Include="src\shader\blinnphong_vs.glsl" />
+    <None Include="src\shader\cubedepth_fs.glsl" />
+    <None Include="src\shader\cubedepth_gs.glsl" />
+    <None Include="src\shader\cubedepth_vs.glsl" />
     <None Include="src\shader\deferred_fs.glsl" />
     <None Include="src\shader\deferred_vs.glsl" />
     <None Include="src\shader\depth_fs.glsl" />
