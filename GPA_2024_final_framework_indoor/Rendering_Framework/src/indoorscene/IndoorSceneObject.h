@@ -86,8 +86,8 @@ private:
 		GLuint depth_tex;
 	
 	}dirLight_shadowmap;
-	// ===============================
 
+	// ===============================
 	struct {
 		GLfloat far_plane;
 		GLfloat near_plane;
@@ -95,6 +95,17 @@ private:
 		GLuint depth_cubeMap;
 
 	}pointLight_shadowmap;
+
+	// ==============================
+	struct {
+		GLuint vao;
+		GLuint vbo_position;
+		float height;
+		float width;
+		vec3 center;
+		vec3 color;
+		mat4 model_mat;
+	}area_light; 
 
 };
 

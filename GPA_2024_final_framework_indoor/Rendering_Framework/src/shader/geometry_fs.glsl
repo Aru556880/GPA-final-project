@@ -15,6 +15,7 @@ layout(location = 15) uniform vec3 specular_albedo;
 
 layout(location = 20) uniform int useNormalMap;
 
+
 in VS_OUT                                                 
 {                                                         
     vec3 position;                                        
@@ -26,10 +27,15 @@ in VS_OUT
 layout(binding = 0) uniform sampler2D tex_diffuse;    
 layout(binding = 1) uniform sampler2D tex_normal;
 
+// 1: default
+// 0: scene model
+// -1: area light rectangle
+uniform float modelType;
+
 void main(void)                                           
 {                                                         
 
-    frag_position = vec4(fs_in.position, 1.0);            
+    frag_position = vec4(fs_in.position, modelType);            
 	frag_normal = vec4(fs_in.normal, 1.0);   
     frag_ambient = vec4(ambient_albedo, 1.0);   
     vec4 texel = texture(tex_diffuse, fs_in.texcoord) ;

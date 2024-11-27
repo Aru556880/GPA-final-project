@@ -56,7 +56,8 @@ public:
 
 
 	float m_test_meshcount = 0;
-	//glm::vec3 light_position = glm::vec3(-2.845, 2.028, -1.293);
-	glm::vec3 light_position = glm::vec3(1.87659, 0.4625, 0.103928);
+	glm::vec3 light_position = glm::vec3(-2.845, 2.028, -1.293);
+	//glm::vec3 light_position = glm::vec3(1.87659, 0.4625, 0.103928);
+	//glm::vec3 light_position = glm::vec3(1.0, 0.5, -0.5);
 };
 

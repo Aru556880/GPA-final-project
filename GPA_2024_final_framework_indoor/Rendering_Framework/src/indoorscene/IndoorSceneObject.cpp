@@ -41,6 +41,37 @@ bool IndoorSceneObject::init() {
 	LoadMeshModel(this->m_roomMeshes, room1_filepath, 0, 21);
 	LoadMeshModel(this->m_roomMeshes, room2_filepath, 65, 68);
 
+	// initialize area light rectangle
+	area_light.center = vec3(1.0f, 0.5f, -0.5f);
+	area_light.height = 1.0f;
+	area_light.width = 1.0f;
+	area_light.color = vec3(0.8f, 0.6f, 0.0f);
+	area_light.model_mat = mat4(1.0);
+
+	float area_light_data[18] = {
+		area_light.center.x + area_light.width * 0.5f , area_light.center.y + area_light.height * 0.5f, area_light.center.z,
+
+		area_light.center.x - area_light.width * 0.5f, area_light.center.y + area_light.height * 0.5f, area_light.center.z,
+
+		area_light.center.x - area_light.width * 0.5f, area_light.center.y - area_light.height * 0.5, area_light.center.z,
+
+		area_light.center.x + area_light.width * 0.5f, area_light.center.y + area_light.height * 0.5f, area_light.center.z,
+
+		area_light.center.x + area_light.width * 0.5f, area_light.center.y - area_light.height * 0.5, area_light.center.z,
+
+		area_light.center.x - area_light.width * 0.5f, area_light.center.y - area_light.height * 0.5, area_light.center.z,
+	};
+
+	glGenVertexArrays(1, &area_light.vao);
+	glBindVertexArray(area_light.vao);
+	glGenBuffers(1, &area_light.vbo_position);
+	glBindBuffer(GL_ARRAY_BUFFER, area_light.vbo_position);
+
+	glBufferData(GL_ARRAY_BUFFER, 18 * sizeof(GL_FLOAT), area_light_data, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(0);
+
+
 	for (int i = 0;i < this->m_roomMeshes.size();++i) {
 		this->m_roomMeshes[i].m_modelMat = mat4(1.0);
 	}
@@ -50,6 +81,7 @@ bool IndoorSceneObject::init() {
 		this->m_triceMeshes[i].m_modelMat = 
 			translate(mat4(1.0f), vec3(2.05, 0.628725, -1.9)) * scale(mat4(1.0f), vec3(0.001f, 0.001f, 0.001f)) ;
 	}
+
 	glClearColor(0.2, 0.2, 0.2, 1.0);
 
 	return flag;
@@ -289,6 +321,7 @@ void IndoorSceneObject::deferred_update() {
 	glDepthFunc(GL_LEQUAL);
 
 	glUniform1i(SceneManager::Instance()->m_useNormalMapHandle, 0);
+	glUniform1f(glGetUniformLocation(m_geometryProgram->programId(), "modelType"), 0);
 	for (int i = 0;i < m_roomMeshes.size();++i) {
 		glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(m_roomMeshes[i].m_modelMat));
 		glBindVertexArray(m_roomMeshes[i].vao);
@@ -303,6 +336,7 @@ void IndoorSceneObject::deferred_update() {
 	}
 	
 	glUniform1i(SceneManager::Instance()->m_useNormalMapHandle, 1);
+	glUniform1f(glGetUniformLocation(m_geometryProgram->programId(), "modelType"), 0);
 	for (int i = 0;i < m_triceMeshes.size();++i) {
 		glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(m_triceMeshes[i].m_modelMat));
 		glBindVertexArray(m_triceMeshes[i].vao);
@@ -319,6 +353,12 @@ void IndoorSceneObject::deferred_update() {
 		glDrawElements(GL_TRIANGLES, m_triceMeshes[i].drawCount, GL_UNSIGNED_INT, nullptr);
 	}
 
+	glUniform1i(SceneManager::Instance()->m_useNormalMapHandle, 0);
+	glUniform1f(glGetUniformLocation(m_geometryProgram->programId(), "modelType"), -1.0);
+	glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(area_light.model_mat));
+	glBindVertexArray(area_light.vao);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+
 	// deferred pass:
 	
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -328,7 +368,7 @@ void IndoorSceneObject::deferred_update() {
 	glBindVertexArray(gbuffer.vao);
 
 	// deferred shading type
-	glUniform1i(21, 7);
+	glUniform1i(21, 8);
 
 	// matrix
 	glUniformMatrix4fv(SceneManager::Instance()->m_viewMatHandle, 1, false, glm::value_ptr(this->m_viewMat));
