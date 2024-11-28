@@ -335,7 +335,8 @@ void IndoorSceneObject::deferred_update() {
 		glDrawElements(GL_TRIANGLES, m_roomMeshes[i].drawCount, GL_UNSIGNED_INT, nullptr);
 	}
 	
-	glUniform1i(SceneManager::Instance()->m_useNormalMapHandle, 1);
+
+	glUniform1i(glGetUniformLocation(m_geometryProgram->programId(), "useNormalMap"), 1);
 	glUniform1f(glGetUniformLocation(m_geometryProgram->programId(), "modelType"), 0);
 	for (int i = 0;i < m_triceMeshes.size();++i) {
 		glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(m_triceMeshes[i].m_modelMat));
@@ -353,11 +354,14 @@ void IndoorSceneObject::deferred_update() {
 		glDrawElements(GL_TRIANGLES, m_triceMeshes[i].drawCount, GL_UNSIGNED_INT, nullptr);
 	}
 
-	glUniform1i(SceneManager::Instance()->m_useNormalMapHandle, 0);
-	glUniform1f(glGetUniformLocation(m_geometryProgram->programId(), "modelType"), -1.0);
-	glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(area_light.model_mat));
-	glBindVertexArray(area_light.vao);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
+	if (SceneManager::Instance()->renderFeature.areaLight.enableLight) {
+		glUniform1i(SceneManager::Instance()->m_useNormalMapHandle, 0);
+		glUniform1f(glGetUniformLocation(m_geometryProgram->programId(), "modelType"), -1.0);
+		glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(area_light.model_mat));
+		glBindVertexArray(area_light.vao);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+	}
+
 
 	// deferred pass:
 	
@@ -368,14 +372,25 @@ void IndoorSceneObject::deferred_update() {
 	glBindVertexArray(gbuffer.vao);
 
 	// deferred shading type
-	glUniform1i(21, 8);
+	glUniform1i(21, 7);
 
 	// matrix
 	glUniformMatrix4fv(SceneManager::Instance()->m_viewMatHandle, 1, false, glm::value_ptr(this->m_viewMat));
 	glUniformMatrix4fv(SceneManager::Instance()->m_shadowMatHandle, 1, false, glm::value_ptr(this->m_shadow_sbpv_matrix));
 
+	// features enable/disable
+	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "enableNormalMap"), SceneManager::Instance()->renderFeature.enableNormalMap);
+	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "enablePhongLight"), SceneManager::Instance()->renderFeature.blinnPhongLight.enableLight);
+	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "enableDirLightShadow"), SceneManager::Instance()->renderFeature.blinnPhongLight.enableShadow);
+	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "enablePointLight"), SceneManager::Instance()->renderFeature.pointLight.enableLight);
+	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "enablePointLightShadow"), SceneManager::Instance()->renderFeature.pointLight.enableShadow);
+	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "enableAreaLight"), SceneManager::Instance()->renderFeature.areaLight.enableLight);
+
 	// light position
 	glUniform3fv(SceneManager::Instance()->m_lightPositionHandle, 1, value_ptr(SceneManager::Instance()->light_position));
+	glUniform3fv(glGetUniformLocation(m_deferredProgram->programId(), "blinnPhongLightPos"), 1, value_ptr(SceneManager::Instance()->dirLightPos));
+	glUniform3fv(glGetUniformLocation(m_deferredProgram->programId(), "pointLightPos"), 1, value_ptr(SceneManager::Instance()->pointLightPos));
+	glUniform3fv(glGetUniformLocation(m_deferredProgram->programId(), "areaLightPos"), 1, value_ptr(SceneManager::Instance()->areaLightPos));
 	
 	// gbuffer texture
 	glActiveTexture(GL_TEXTURE0);
@@ -411,17 +426,17 @@ void IndoorSceneObject::deferred_update() {
 
 void IndoorSceneObject::shadowmap_update(){
 	
-	vec3 light_position = SceneManager::Instance()->light_position;
+	vec3 dir_light_position = SceneManager::Instance()->dirLightPos;
 	// ====================================================
 	// directional light shadow map
 
-	const float shadow_range = 10.0f;
+	const float shadow_range = 5.0f;
 	vec3 light_lookCenter = vec3(0.542f, -0.141f, -0.422f);
 	mat4 scale_bias_matrix =
 		translate(mat4(1.0f), vec3(0.5f, 0.5f, 0.5f)) * scale(mat4(1.0f), vec3(0.5f, 0.5f, 0.5f));
 
-	mat4 light_proj_matrix = ortho(-shadow_range, shadow_range, -shadow_range, shadow_range, 0.0f, 50.0f);
-	mat4 light_view_matrix = lookAt(light_position, light_lookCenter, vec3(0.0f, 1.0f, 0.0f));
+	mat4 light_proj_matrix = ortho(-shadow_range, shadow_range, -shadow_range, shadow_range, 0.1f, 10.0f);
+	mat4 light_view_matrix = lookAt(dir_light_position, light_lookCenter, vec3(0.0f, 1.0f, 0.0f));
 	mat4 light_vp_matrix = light_proj_matrix * light_view_matrix;
 
 	m_shadow_sbpv_matrix = scale_bias_matrix * light_vp_matrix;
@@ -461,6 +476,7 @@ void IndoorSceneObject::shadowmap_update(){
 	//glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClear(GL_DEPTH_BUFFER_BIT);
 
+	vec3 point_light_pos = SceneManager::Instance()->pointLightPos;
 	GLfloat aspect = (GLfloat)SHADOW_WIDTH / (GLfloat)SHADOW_HEIGHT;
 	GLfloat near = 0.22f;
 	GLfloat far = 10.0f;
@@ -468,23 +484,23 @@ void IndoorSceneObject::shadowmap_update(){
 
 	std::vector<glm::mat4> shadowTransforms;
 	shadowTransforms.push_back(shadowProj *
-		lookAt(light_position, light_position + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+		lookAt(point_light_pos, point_light_pos + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
 	shadowTransforms.push_back(shadowProj *
-		lookAt(light_position, light_position + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+		lookAt(point_light_pos, point_light_pos + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
 	shadowTransforms.push_back(shadowProj *
-		lookAt(light_position, light_position + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
+		lookAt(point_light_pos, point_light_pos + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
 	shadowTransforms.push_back(shadowProj *
-		lookAt(light_position, light_position + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
+		lookAt(point_light_pos, point_light_pos + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
 	shadowTransforms.push_back(shadowProj *
-		lookAt(light_position, light_position + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
+		lookAt(point_light_pos, point_light_pos + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
 	shadowTransforms.push_back(shadowProj *
-		lookAt(light_position, light_position + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
+		lookAt(point_light_pos, point_light_pos + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
 
 	for (GLuint i = 0; i < 6; ++i)
 		glUniformMatrix4fv(glGetUniformLocation(m_pointLightShadowProgram->programId(), ("shadowMatrices[" + std::to_string(i) + "]").c_str()), 1, GL_FALSE, glm::value_ptr(shadowTransforms[i]));
 
-	glUniform3fv(SceneManager::Instance()->m_lightPositionHandle, 1, value_ptr(light_position));
-	glUniform1f(SceneManager::Instance()->m_farPlaneHandle, far);
+	glUniform3fv(glGetUniformLocation(m_pointLightShadowProgram->programId(), "pointLightPos"), 1, value_ptr(SceneManager::Instance()->pointLightPos));
+	glUniform1f(glGetUniformLocation(m_pointLightShadowProgram->programId(), "far_plane"), far);
 
 	for (int i = 0;i < m_roomMeshes.size();++i) {
 		glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(m_roomMeshes[i].m_modelMat));
@@ -502,68 +518,6 @@ void IndoorSceneObject::shadowmap_update(){
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glViewport(0, 0, m_window_width, m_window_height);
-}
-
-void IndoorSceneObject::shadowmap_draw() {
-	m_blinnphongProgram->useProgram();
-	glUniformMatrix4fv(SceneManager::Instance()->m_projMatHandle, 1, false, glm::value_ptr(this->m_projMat));
-	glUniformMatrix4fv(SceneManager::Instance()->m_viewMatHandle, 1, false, glm::value_ptr(this->m_viewMat));
-
-	mat4 shadow_matrix = mat4(1.0);
-
-	glUniform1i(20, -1);
-	for (int i = 0;i < m_roomMeshes.size();++i) {
-
-		glBindVertexArray(m_roomMeshes[i].vao);
-
-		shadow_matrix = m_shadow_sbpv_matrix * m_roomMeshes[i].m_modelMat;
-		glUniformMatrix4fv(SceneManager::Instance()->m_shadowMatHandle, 1, false, glm::value_ptr(shadow_matrix));
-
-		glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(m_roomMeshes[i].m_modelMat));
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, m_roomMeshes[i].material.diffuse_tex);
-
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, dirLight_shadowmap.depth_tex);
-
-		glUniform3fv(SceneManager::Instance()->m_lightPositionHandle, 1, value_ptr(SceneManager::Instance()->light_position));
-		glUniform3fv(SceneManager::Instance()->m_ambientAlbedoHandle, 1, value_ptr(m_roomMeshes[i].material.Ka));
-		glUniform3fv(SceneManager::Instance()->m_diffuseAlbedoHandle, 1, value_ptr(m_roomMeshes[i].material.Kd));
-		glUniform3fv(SceneManager::Instance()->m_specularAlbedoHandle, 1, value_ptr(m_roomMeshes[i].material.Ks));
-		glUniform1f(SceneManager::Instance()->m_shininessHandle, m_roomMeshes[i].material.shininess);
-
-		glDrawElements(GL_TRIANGLES, m_roomMeshes[i].drawCount, GL_UNSIGNED_INT, nullptr);
-	}
-
-	glUniform1i(20, 1);
-	for (int i = 0;i < m_triceMeshes.size();++i) {
-
-		glBindVertexArray(m_triceMeshes[i].vao);
-
-		shadow_matrix = m_shadow_sbpv_matrix * m_triceMeshes[i].m_modelMat;
-		glUniformMatrix4fv(SceneManager::Instance()->m_shadowMatHandle, 1, false, glm::value_ptr(shadow_matrix));
-
-
-		glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(m_triceMeshes[i].m_modelMat));
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, m_triceMeshes[i].material.diffuse_tex);
-
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, dirLight_shadowmap.depth_tex);
-
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, m_triceMeshes[i].material.normalmap_tex);
-
-		glUniform3fv(SceneManager::Instance()->m_lightPositionHandle, 1, value_ptr(SceneManager::Instance()->light_position));
-		glUniform3fv(SceneManager::Instance()->m_ambientAlbedoHandle, 1, value_ptr(m_triceMeshes[i].material.Ka));
-		glUniform3fv(SceneManager::Instance()->m_diffuseAlbedoHandle, 1, value_ptr(m_triceMeshes[i].material.Kd));
-		glUniform3fv(SceneManager::Instance()->m_specularAlbedoHandle, 1, value_ptr(m_triceMeshes[i].material.Ks));
-		glUniform1f(SceneManager::Instance()->m_shininessHandle, m_triceMeshes[i].material.shininess);
-
-		glDrawElements(GL_TRIANGLES, m_triceMeshes[i].drawCount, GL_UNSIGNED_INT, nullptr);
-	}
 }
 
 namespace DEFERRED_MAP_TYPE {

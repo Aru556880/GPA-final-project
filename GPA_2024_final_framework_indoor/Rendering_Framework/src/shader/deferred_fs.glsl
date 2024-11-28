@@ -13,26 +13,43 @@ layout(binding = 6) uniform sampler2D normalTexture_map; // normal mapping textu
 layout (binding = 7) uniform sampler2DShadow dirLightShadow_map;
 layout (binding = 8) uniform samplerCube  pointLightShadow_map;
 
-
-
 layout(location = 1) uniform mat4 viewMat ;
 layout(location = 3) uniform mat4 shadow_matrix;
 layout(location = 11) uniform vec3 light_pos_world;
 layout(location = 18) uniform float far_plane;
 layout(location = 21) uniform int deferred_map_type;
 
+// features enable/disable
+uniform int enableNormalMap;
+uniform int enablePhongLight;
+uniform int enableDirLightShadow;
+uniform int enablePointLight;
+uniform int enablePointLightShadow;
+uniform int enableAreaLight;
+
+
+// light in world space
+uniform vec3 blinnPhongLightPos;
+uniform vec3 pointLightPos;
+uniform vec3 areaLightPos;
+
 in VS_OUT                                                                   
 {                                                                        
 	vec2 texcoord;                                                       
 }fs_in;      
 
-vec3 Ia = vec3(0.1, 0.1, 0.1);
+vec3 Ia = vec3(0.01, 0.01, 0.01);
 vec3 Id = vec3(0.7, 0.7, 0.7);
 vec3 Is = vec3(0.2, 0.2, 0.2);
+
+vec3 Ka;
+vec3 Ks;
+vec3 Kd;
 
 float shininess = 225.0;
 float PI = 3.14159265359;
 
+vec3 BlinnPhongLightColor(vec3 worldLightPos, vec3 worldNormal, vec3 viewFragPosition, bool useNormalMap);
 float DirLightShadow(vec3 fragPos);
 float PointLightShadow(vec3 fragPos);
 vec3 AreaLightColor(vec4 view_position, vec3 normal, vec3 viewDir, vec3 diffuseFactor);
@@ -41,10 +58,15 @@ vec3 CalculatePlaneIntersection(vec3 viewPosition, vec3 reflectionVector, vec3 l
 void main(){
     // see comment in geometry_fs for modelType id
     float modelType = texture(position_map, fs_in.texcoord).a;
+    bool useNormalMap = texture(normalTexture_map, fs_in.texcoord).a > 0;
+    vec3 final_color = vec3(0);
 
     if(modelType == -1.0){
         frag_color = vec4(0.8, 0.6, 0.0, 1.0);
         return;
+    }
+    else if(modelType == 1.0){
+        frag_color = vec4(0.8,0.8,0.8,1.0);
     }
 
 	vec3 world_position = texture(position_map, fs_in.texcoord).rgb;
@@ -52,50 +74,33 @@ void main(){
     vec3 world_tangent = texture(tangent_map, fs_in.texcoord).rgb; // normalized mv tangent
     vec3 normal_tex = texture(normalTexture_map, fs_in.texcoord).rgb;  
 
-	vec3 Ka = texture(ambient_map, fs_in.texcoord).rgb;
-	vec3 Kd = texture(diffuse_map, fs_in.texcoord).rgb;
-	vec3 Ks = texture(specular_map, fs_in.texcoord).rgb;
+	Ka = texture(ambient_map, fs_in.texcoord).rgb;
+	Kd = texture(diffuse_map, fs_in.texcoord).rgb;
+	Ks = texture(specular_map, fs_in.texcoord).rgb;
 
-    vec4 light_pos_view = viewMat * vec4(light_pos_world, 1.0);
 	vec4 view_position = viewMat * vec4(world_position, 1.0) ;
+    vec4 view_normal = vec4( mat3(viewMat) * world_normal, 1.0) ;
 
-    // calculate blinnphong shading color 
-    
-	vec3 N = normalize(mat3(viewMat) * world_normal);
-    vec3 L = light_pos_view.xyz - view_position.xyz;
-    vec3 V = normalize(- view_position.xyz);
-    float distance = length(L);
-    L = normalize(L);
+    // 1: blinnphong lighting & shadow
+	vec3 blinnPhongColor 
+        = BlinnPhongLightColor(blinnPhongLightPos, view_normal.xyz, view_position.xyz, useNormalMap);
+    float dirLightShadow = DirLightShadow(world_position);
 
-    vec3 T = world_tangent;
-    vec3 B = cross(N, T);
-    vec3 H = normalize(L + V);
-    
-    vec3 ambient = Ia * Ka;
-	vec3 diffuse = Id * max(dot(N, L), 0) * Kd;
-	vec3 specular = Is * pow(max(dot(N, H), 0), shininess) * Ks;
-
-    // For normal mapping
-    vec3 L_t = normalize(vec3(dot(L, T), dot(L, B), dot(L, N)));
-    vec3 V_t = normalize(vec3(dot(V, T), dot(V, B), dot(V, N)));
-    vec3 H_t = normalize(L_t+ V_t);
-	vec3 N_t = vec3(0.0, 0.0, 1.0);  
-
-    if(length(normal_tex) > 0){
-        N_t = normalize(normal_tex * 2.0 - vec3(1.0));
-	    diffuse = Id * max(dot(N_t, L_t), 0) * Kd;
-	    specular = Is * pow(max(dot(N_t, H_t), 0), shininess) * Ks;
-    }
-
-	vec3 blinnPhongColor = ambient*0.1 + diffuse + specular;
-
-    // point light color:
+    // 2: point light & shadow
     float c1 = 1.0;
     float c2 = 0.7;
     float c3 = 0.14;
 
+    vec4 pointLightPos_view = viewMat * vec4(pointLightPos, 1.0);
+    float distance = length(pointLightPos_view.xyz - view_position.xyz);
+
     float f_a = min( 1/(c1 + c2 * distance + c3 * distance * distance), 1.0 );
-    vec3 pointLightColor = ambient*0.1 + (diffuse + specular) * f_a;
+    vec3 pointLightColor = 
+        BlinnPhongLightColor(pointLightPos, view_normal.xyz, view_position.xyz, useNormalMap) ;
+    float pointLightShadow = PointLightShadow(world_position);
+
+    // 3: area ligt
+    vec3 areaLightColor = AreaLightColor(view_position, view_normal.xyz, - view_position.xyz, Kd);
 
 	vec3 color = vec3(0);
     float shadow = 0;
@@ -123,12 +128,12 @@ void main(){
             color = (1.0-shadow) * blinnPhongColor; 
             break;
         case 7:
-           shadow = PointLightShadow(world_position);    
+            shadow = PointLightShadow(world_position);    
             //color =  vec3(shadow); //DEBUG;
-            color = (1.0-shadow) * pointLightColor ;
+            color = (1.0-shadow) * pointLightColor;
             break;
         case 8:
-            color = AreaLightColor(view_position, N, V, Kd) ;
+            color = AreaLightColor(view_position, view_normal.xyz, - view_position.xyz, Kd) ;
             break;
         default:
             color = vec3(1.0);
@@ -136,7 +141,45 @@ void main(){
     }
 
 
-    frag_color = vec4(color,1.0);
+    final_color = enablePhongLight * blinnPhongColor * (1.0 - dirLightShadow * enableDirLightShadow)+ 
+                  enablePointLight * pointLightColor * (1.0 - pointLightShadow * enablePointLightShadow)+ 
+                  enableAreaLight * areaLightColor;
+
+    frag_color = vec4(final_color, 1.0);
+}
+
+vec3 BlinnPhongLightColor(vec3 worldLightPos, vec3 viewNormal, vec3 viewFragPosition, bool useNormalMap) {
+    vec4 viewLightPos = viewMat * vec4(worldLightPos, 1.0);
+
+    vec3 N = normalize(viewNormal);
+    vec3 L = viewLightPos.xyz - viewFragPosition;
+    vec3 V = normalize(- viewFragPosition);
+    L = normalize(L);
+    vec3 H = normalize(L + V);
+
+    vec3 ambient = Ia * Ka;
+	vec3 diffuse = Id * max(dot(N, L), 0) * Kd;
+	vec3 specular = Is * pow(max(dot(N, H), 0), shininess) * Ks;
+    
+
+    if(useNormalMap){
+        vec3 normal_tex = texture(normalTexture_map, fs_in.texcoord).rgb;  
+        vec3 world_tangent = texture(tangent_map, fs_in.texcoord).rgb;
+
+        vec3 T = world_tangent;
+        vec3 B = cross(N, T);
+
+        vec3 L_t = normalize(vec3(dot(L, T), dot(L, B), dot(L, N)));
+        vec3 V_t = normalize(vec3(dot(V, T), dot(V, B), dot(V, N)));
+        vec3 H_t = normalize(L_t+ V_t);
+	    vec3 N_t = vec3(0.0, 0.0, 1.0);  
+        
+        N_t = normalize(normal_tex * 2.0 - vec3(1.0));
+	    diffuse = Id * max(dot(N_t, L_t), 0) * Kd;
+	    specular = Is * pow(max(dot(N_t, H_t), 0), shininess) * Ks;
+    }
+
+    return ambient + diffuse + specular;
 }
 
 float DirLightShadow(vec3 fragPos){
@@ -147,18 +190,17 @@ float DirLightShadow(vec3 fragPos){
 float PointLightShadow(vec3 fragPos){
 
     // Get vector between fragment position and light position
-    vec3 fragToLight = fragPos - light_pos_world;
+    vec3 fragToLight = fragPos - pointLightPos;
 
     // Use the light to fragment vector to sample from the depth map    
     float closestDepth = texture(pointLightShadow_map, fragToLight).r;
-    //return closestDepth ;
     
     // It is currently in linear range between [0,1]. Re-transform back to original value
     closestDepth *= 10.0;
 
     // Now get current linear depth as the length between the fragment and light position
     float currentDepth = length(fragToLight);
-    //return currentDepth / 10.0;
+
     // Now test for shadows
     float bias = 0.05; 
     float shadow = currentDepth -  bias > closestDepth ? 1.0 : 0.0;
@@ -172,7 +214,8 @@ vec3 AreaLightColor(vec4 view_position, vec3 normal, vec3 viewDir, vec3 diffuseF
     float rect_w = 1.0;
     vec3 r = reflect(-viewDir, normal);
     vec3 lightColor = vec3(0.8, 0.6, 0.0);
-    vec3 arealight_worldpos = vec3(1.0, 0.5, -0.5);
+    vec3 arealight_worldpos = areaLightPos;
+
     // left upper
     vec4 light_cornerPos_view0
         = viewMat * vec4( arealight_worldpos + vec3( - rect_w * 0.5, rect_h * 0.5, 0), 1.0);
@@ -220,12 +263,26 @@ vec3 AreaLightColor(vec4 view_position, vec3 normal, vec3 viewDir, vec3 diffuseF
 
     float solidAngle = g0 + g1 + g2 + g3 - 2.0 * PI;
 
-    float NoL = solidAngle  * 0.2 * (
+    float totalWeight  = solidAngle  * 1.0 * (
 	    clamp ( dot( normalize ( v0 ) , normal ), 0.0, 1.0 ) +
 	    clamp ( dot( normalize ( v1 ) , normal ), 0.0, 1.0 )+
 	    clamp ( dot( normalize ( v2 ) , normal ), 0.0, 1.0 )+
 	    clamp ( dot( normalize ( v3 ) , normal ), 0.0, 1.0 )+
 	    clamp ( dot( normalize ( light_centerPos.xyz - view_position.xyz ) , normal ), 0.0, 1.0 ) );
+
+    float d0 = length(v0);
+    float d1 = length(v1);
+    float d2 = length(v2);
+    float d3 = length(v3);
+    float dCenter = length(light_centerPos.xyz - view_position.xyz);
+
+    float weight0 = pow(d0, 0.5); 
+    float weight1 = pow(d1, 0.5);
+    float weight2 = pow(d2, 0.5);
+    float weight3 = pow(d3, 0.5);
+    float weightCenter = pow(dCenter, 0.5);
+    float NoL = solidAngle * totalWeight ;
+
 
     vec3 intersectPoint = CalculatePlaneIntersection(view_position.xyz, r, lightDir, light_centerPos.xyz);
 
@@ -247,9 +304,10 @@ vec3 AreaLightColor(vec4 view_position, vec3 normal, vec3 viewDir, vec3 diffuseF
     vec3 nearestPoint = light_centerPos.xyz + (right * nearest2DPoint.x + up * nearest2DPoint.y);
     float dist = distance(view_position.xyz, light_centerPos.xyz);
     float falloff = 1.0 - clamp(dist/lightRadius, 0.0, 1.0);	
+    falloff = 1.0 / (1.0 + dist * dist);
 
     float luminosity = 1.0;
-    vec3 light = (  diffuseFactor * NoL )   * lightColor * 1.0;
+    vec3 light = (  diffuseFactor * NoL )  * falloff * lightColor * 1.0;
     return light;
 }
 

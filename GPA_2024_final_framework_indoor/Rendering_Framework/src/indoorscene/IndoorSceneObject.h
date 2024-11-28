@@ -26,7 +26,6 @@ private:
 
 	void deferred_update();
 	void shadowmap_update();
-	void shadowmap_draw(); //discarded now, shadowmap is now in deferred shader
 
 	bool deferred_init();
 	bool shadowmap_init();

@@ -3,6 +3,7 @@
 #include <glad\glad.h>
 #include <glm\glm.hpp>
 
+using namespace glm;
 // Singleton
 class SceneManager
 {
@@ -59,5 +60,31 @@ public:
 	glm::vec3 light_position = glm::vec3(-2.845, 2.028, -1.293);
 	//glm::vec3 light_position = glm::vec3(1.87659, 0.4625, 0.103928);
 	//glm::vec3 light_position = glm::vec3(1.0, 0.5, -0.5);
+
+	vec3 dirLightPos = vec3(-2.845f, 2.028f, -1.293f);
+	vec3 pointLightPos = vec3(1.87659f, 0.4625f, 0.103928f);
+	vec3 areaLightPos = vec3(1.0f, 0.5f, -0.5f);
+
+	struct {
+		bool enableNormalMap = false;
+
+		struct {
+			bool enableLight = false;
+			bool enableShadow = false;
+			vec3 lightPos = vec3(-2.845f, 2.028f, -1.293f);
+		}blinnPhongLight;
+
+		struct {
+			bool enableLight = false;
+			bool enableShadow = false;
+			vec3 lightPos = vec3(1.87659f, 0.4625f, 0.103928f);
+		}pointLight;
+
+		struct {
+			bool enableLight = false;
+			vec3 lightPos = vec3(1.0f, 0.5f, -0.5f);
+		}areaLight;
+
+	}renderFeature;
 };
 

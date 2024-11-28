@@ -494,11 +494,13 @@ void LoadMeshModel(vector<MyMesh>& shapes, string filePath, uint start_mesh, uin
 		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(2);
 
+		// mytangents: obtained by aiProcess_CalcTangentSpace
+		// tangents: calculated manually as in lecture program
+		// I want to apply tangent to other indoor models but te rendered result will be weird...
 		glBindBuffer(GL_ARRAY_BUFFER, shape.vbo_tangent);
-		glBufferData(GL_ARRAY_BUFFER, mytangent.size() * sizeof(GL_FLOAT), mytangent.data(), GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, tangents.size() * sizeof(GL_FLOAT), tangents.data(), GL_STATIC_DRAW);
 		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(3);
-		//delete tangents;
 
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.ibo);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GL_UNSIGNED_INT), indices.data(), GL_STATIC_DRAW);

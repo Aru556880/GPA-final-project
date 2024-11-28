@@ -21,10 +21,31 @@ void MyImGuiPanel::update() {
 	const std::string FT_STR = "Frame: " + std::to_string(this->m_avgFrameTime);
 	ImGui::TextColored(ImVec4(0, 220, 0, 255), FT_STR.c_str());
 
-	ImGui::InputFloat3("Eye Position", &(m_cameraManager->playerViewOrig_ref()->x));
-	ImGui::InputFloat3("Look Center", &(m_cameraManager->playerCameraLookCenter_ref()->x));
-	ImGui::InputFloat3("Light Position", &(SceneManager::Instance()->light_position.x));
+	ImGui::SliderFloat3("Eye Position", &(m_cameraManager->playerViewOrig_ref()->x), -5.0, 5.0);
+	ImGui::SliderFloat3("Look Center", &(m_cameraManager->playerCameraLookCenter_ref()->x), -5.0, 5.0);
 
+	ImGui::PushID(static_cast<int>(0));
+	if (ImGui::CollapsingHeader("Blinn Phong Lighting")) {
+		ImGui::SliderFloat3("Light Position", &(SceneManager::Instance()->dirLightPos.x), -5.0f, 5.0f);
+		ImGui::Checkbox("Enable Light", &SceneManager::Instance()->renderFeature.blinnPhongLight.enableLight);
+		ImGui::Checkbox("Enable Shadow", &SceneManager::Instance()->renderFeature.blinnPhongLight.enableShadow);
+	}
+	ImGui::PopID();
+
+	ImGui::PushID(static_cast<int>(1));
+	if (ImGui::CollapsingHeader("Point Light")) {
+		ImGui::SliderFloat3("Light Position", &(SceneManager::Instance()->pointLightPos.x), -5.0f, 5.0f);
+		ImGui::Checkbox("Enable Light", &SceneManager::Instance()->renderFeature.pointLight.enableLight);
+		ImGui::Checkbox("Enable Shadow", &SceneManager::Instance()->renderFeature.pointLight.enableShadow);
+	}
+	ImGui::PopID();
+
+	ImGui::PushID(static_cast<int>(2));
+	if (ImGui::CollapsingHeader("Area Light")) {
+		ImGui::SliderFloat3("Light Position", &(SceneManager::Instance()->areaLightPos.x), -5.0f, 5.0f);
+		ImGui::Checkbox("Enable Light", &SceneManager::Instance()->renderFeature.areaLight.enableLight);
+	}
+	ImGui::PopID();
 }
 
 void MyImGuiPanel::setAvgFPS(const double avgFPS){

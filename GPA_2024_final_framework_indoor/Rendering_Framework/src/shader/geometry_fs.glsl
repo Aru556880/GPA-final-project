@@ -30,6 +30,7 @@ layout(binding = 1) uniform sampler2D tex_normal;
 // 1: default
 // 0: scene model
 // -1: area light rectangle
+// -2: point light sphere
 uniform float modelType;
 
 void main(void)                                           
