@@ -26,7 +26,7 @@ void MyImGuiPanel::update() {
 
 	ImGui::PushID(static_cast<int>(0));
 	if (ImGui::CollapsingHeader("Blinn Phong Lighting")) {
-		ImGui::SliderFloat3("Light Position", &(SceneManager::Instance()->dirLightPos.x), -5.0f, 5.0f);
+		ImGui::SliderFloat3("Light Position", &(SceneManager::Instance()->renderFeature.blinnPhongLight.lightPos[0]), -5.0f, 5.0f);
 		ImGui::Checkbox("Enable Light", &SceneManager::Instance()->renderFeature.blinnPhongLight.enableLight);
 		ImGui::Checkbox("Enable Shadow", &SceneManager::Instance()->renderFeature.blinnPhongLight.enableShadow);
 	}
@@ -34,7 +34,7 @@ void MyImGuiPanel::update() {
 
 	ImGui::PushID(static_cast<int>(1));
 	if (ImGui::CollapsingHeader("Point Light")) {
-		ImGui::SliderFloat3("Light Position", &(SceneManager::Instance()->pointLightPos.x), -5.0f, 5.0f);
+		ImGui::SliderFloat3("Light Position", &(SceneManager::Instance()->renderFeature.pointLight.lightPos[0]), -5.0f, 5.0f);
 		ImGui::Checkbox("Enable Light", &SceneManager::Instance()->renderFeature.pointLight.enableLight);
 		ImGui::Checkbox("Enable Shadow", &SceneManager::Instance()->renderFeature.pointLight.enableShadow);
 	}
@@ -42,7 +42,7 @@ void MyImGuiPanel::update() {
 
 	ImGui::PushID(static_cast<int>(2));
 	if (ImGui::CollapsingHeader("Area Light")) {
-		ImGui::SliderFloat3("Light Position", &(SceneManager::Instance()->areaLightPos.x), -5.0f, 5.0f);
+		ImGui::SliderFloat3("Light Position", &(SceneManager::Instance()->renderFeature.areaLight.lightPos[0]), -5.0f, 5.0f);
 		ImGui::Checkbox("Enable Light", &SceneManager::Instance()->renderFeature.areaLight.enableLight);
 	}
 	ImGui::PopID();

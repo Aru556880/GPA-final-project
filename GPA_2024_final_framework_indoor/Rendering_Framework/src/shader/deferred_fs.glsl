@@ -15,7 +15,6 @@ layout (binding = 8) uniform samplerCube  pointLightShadow_map;
 
 layout(location = 1) uniform mat4 viewMat ;
 layout(location = 3) uniform mat4 shadow_matrix;
-layout(location = 11) uniform vec3 light_pos_world;
 layout(location = 18) uniform float far_plane;
 layout(location = 21) uniform int deferred_map_type;
 

@@ -357,6 +357,11 @@ void IndoorSceneObject::deferred_update() {
 	if (SceneManager::Instance()->renderFeature.areaLight.enableLight) {
 		glUniform1i(SceneManager::Instance()->m_useNormalMapHandle, 0);
 		glUniform1f(glGetUniformLocation(m_geometryProgram->programId(), "modelType"), -1.0);
+
+		// calculate model transform of area light from the area light parameter from scenemanager
+		// area_light.center = initial area light position
+		vec3 translate_vector = SceneManager::Instance()->renderFeature.areaLight.lightPos - area_light.center;
+		area_light.model_mat = translate(mat4(1.0f), translate_vector);
 		glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(area_light.model_mat));
 		glBindVertexArray(area_light.vao);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -387,10 +392,9 @@ void IndoorSceneObject::deferred_update() {
 	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "enableAreaLight"), SceneManager::Instance()->renderFeature.areaLight.enableLight);
 
 	// light position
-	glUniform3fv(SceneManager::Instance()->m_lightPositionHandle, 1, value_ptr(SceneManager::Instance()->light_position));
-	glUniform3fv(glGetUniformLocation(m_deferredProgram->programId(), "blinnPhongLightPos"), 1, value_ptr(SceneManager::Instance()->dirLightPos));
-	glUniform3fv(glGetUniformLocation(m_deferredProgram->programId(), "pointLightPos"), 1, value_ptr(SceneManager::Instance()->pointLightPos));
-	glUniform3fv(glGetUniformLocation(m_deferredProgram->programId(), "areaLightPos"), 1, value_ptr(SceneManager::Instance()->areaLightPos));
+	glUniform3fv(glGetUniformLocation(m_deferredProgram->programId(), "blinnPhongLightPos"), 1, value_ptr(SceneManager::Instance()->renderFeature.blinnPhongLight.lightPos));
+	glUniform3fv(glGetUniformLocation(m_deferredProgram->programId(), "pointLightPos"), 1, value_ptr(SceneManager::Instance()->renderFeature.pointLight.lightPos));
+	glUniform3fv(glGetUniformLocation(m_deferredProgram->programId(), "areaLightPos"), 1, value_ptr(SceneManager::Instance()->renderFeature.areaLight.lightPos));
 	
 	// gbuffer texture
 	glActiveTexture(GL_TEXTURE0);
@@ -426,7 +430,7 @@ void IndoorSceneObject::deferred_update() {
 
 void IndoorSceneObject::shadowmap_update(){
 	
-	vec3 dir_light_position = SceneManager::Instance()->dirLightPos;
+	vec3 dir_light_position = SceneManager::Instance()->renderFeature.blinnPhongLight.lightPos;
 	// ====================================================
 	// directional light shadow map
 
@@ -476,7 +480,7 @@ void IndoorSceneObject::shadowmap_update(){
 	//glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClear(GL_DEPTH_BUFFER_BIT);
 
-	vec3 point_light_pos = SceneManager::Instance()->pointLightPos;
+	vec3 point_light_pos = SceneManager::Instance()->renderFeature.pointLight.lightPos;
 	GLfloat aspect = (GLfloat)SHADOW_WIDTH / (GLfloat)SHADOW_HEIGHT;
 	GLfloat near = 0.22f;
 	GLfloat far = 10.0f;
@@ -499,7 +503,7 @@ void IndoorSceneObject::shadowmap_update(){
 	for (GLuint i = 0; i < 6; ++i)
 		glUniformMatrix4fv(glGetUniformLocation(m_pointLightShadowProgram->programId(), ("shadowMatrices[" + std::to_string(i) + "]").c_str()), 1, GL_FALSE, glm::value_ptr(shadowTransforms[i]));
 
-	glUniform3fv(glGetUniformLocation(m_pointLightShadowProgram->programId(), "pointLightPos"), 1, value_ptr(SceneManager::Instance()->pointLightPos));
+	glUniform3fv(glGetUniformLocation(m_pointLightShadowProgram->programId(), "pointLightPos"), 1, value_ptr(SceneManager::Instance()->renderFeature.pointLight.lightPos));
 	glUniform1f(glGetUniformLocation(m_pointLightShadowProgram->programId(), "far_plane"), far);
 
 	for (int i = 0;i < m_roomMeshes.size();++i) {
