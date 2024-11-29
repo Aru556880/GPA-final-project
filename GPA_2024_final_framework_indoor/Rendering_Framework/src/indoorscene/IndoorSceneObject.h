@@ -62,6 +62,7 @@ private:
 	// post-process programs
 	ShaderProgram* m_bloomProgram;
 	ShaderProgram* m_blurProgram;
+	ShaderProgram* m_fxaaProgram;
 
 	// deferred program variables
 	struct

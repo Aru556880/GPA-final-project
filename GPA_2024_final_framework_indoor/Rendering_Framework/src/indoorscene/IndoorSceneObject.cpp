@@ -216,9 +216,11 @@ bool IndoorSceneObject::shadowmap_init()
 }
 
 bool IndoorSceneObject::post_process_init() {
-	bool flag = true;
+	bool flag = true; 
 	flag &= setShaderProgram(m_bloomProgram, "deferred_vs.glsl", "", "bloom_fs.glsl");
 	flag &= setShaderProgram(m_blurProgram, "deferred_vs.glsl", "", "blur_fs.glsl");
+	flag &= setShaderProgram(m_fxaaProgram, "deferred_vs.glsl", "", "FXAA_fs.glsl");
+
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
 
@@ -453,15 +455,9 @@ void IndoorSceneObject::deferred_update() {
 
 	// ====================================================
 	// deferred pass:
-	if (SceneManager::Instance()->renderFeature.pointLight.enableLight) {
-		glBindFramebuffer(GL_FRAMEBUFFER, post_process_buffer.fbo);
-		unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
-		glDrawBuffers(2, attachments);
-	}
-	else {
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glDrawBuffer(GL_BACK);
-	}
+	glBindFramebuffer(GL_FRAMEBUFFER, post_process_buffer.fbo);
+	unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+	glDrawBuffers(2, attachments);
 
 	m_deferredProgram->useProgram();
 	glBindVertexArray(gbuffer.vao);
@@ -526,39 +522,54 @@ void IndoorSceneObject::deferred_update() {
 
 void IndoorSceneObject::post_process_update() {
 	
-	if (!SceneManager::Instance()->renderFeature.pointLight.enableLight) return;
+	if (SceneManager::Instance()->renderFeature.pointLight.enableLight) {
+		// blur effect pass
+		bool horizontal = true, first_iteration = true;
+		int amount = 10;
+		m_blurProgram->useProgram();
+		for (unsigned int i = 0; i < amount; i++)
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
+			glUniform1i(glGetUniformLocation(m_blurProgram->programId(), "horizontal"), horizontal);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, first_iteration ? post_process_buffer.bright_scene : pingpongBuffer[!horizontal]);
 
-	// blur effect pass
-	bool horizontal = true, first_iteration = true;
-	int amount = 10;
-	m_blurProgram->useProgram();
-	for (unsigned int i = 0; i < amount; i++)
-	{
-		glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
-		glUniform1i(glGetUniformLocation(m_blurProgram->programId(), "horizontal"), horizontal);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, first_iteration ? post_process_buffer.bright_scene : pingpongBuffer[!horizontal]);
-		
+			glBindVertexArray(gbuffer.vao);
+			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+			horizontal = !horizontal;
+			if (first_iteration)
+				first_iteration = false;
+		}
+
+		// bloom effect pass
+		// glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		// glDrawBuffer(GL_BACK);
+		glBindFramebuffer(GL_FRAMEBUFFER, post_process_buffer.fbo);
+
+		m_bloomProgram->useProgram();
 		glBindVertexArray(gbuffer.vao);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, post_process_buffer.scene);
+
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, pingpongBuffer[1]);
+
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-		
-		horizontal = !horizontal;
-		if (first_iteration)
-			first_iteration = false;
 	}
 
-	// bloom effect pass
+	// FXAA pass
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glDrawBuffer(GL_BACK);
 
-	m_bloomProgram->useProgram();
+	m_fxaaProgram->useProgram();
 	glBindVertexArray(gbuffer.vao);
+
+	glUniform1i(glGetUniformLocation(m_fxaaProgram->programId(), "enableFXAA"), SceneManager::Instance()->renderFeature.enableFXAA);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, post_process_buffer.scene);
-
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, pingpongBuffer[1]);
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }

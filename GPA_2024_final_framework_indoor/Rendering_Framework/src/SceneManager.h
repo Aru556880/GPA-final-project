@@ -64,6 +64,7 @@ public:
 
 	struct {
 		bool enableNormalMap = false;
+		bool enableFXAA = false;
 
 		struct {
 			bool enableLight = false;

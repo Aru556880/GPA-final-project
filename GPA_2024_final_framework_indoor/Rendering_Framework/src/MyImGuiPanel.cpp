@@ -24,6 +24,7 @@ void MyImGuiPanel::update() {
 	ImGui::SliderFloat3("Eye Position", &(m_cameraManager->playerViewOrig_ref()->x), -5.0, 5.0);
 	ImGui::SliderFloat3("Look Center", &(m_cameraManager->playerCameraLookCenter_ref()->x), -5.0, 5.0);
 	ImGui::Checkbox("Enable Normal Map", &SceneManager::Instance()->renderFeature.enableNormalMap);
+	ImGui::Checkbox("Enable FXAA", &SceneManager::Instance()->renderFeature.enableFXAA);
 	
 	ImGui::PushID(static_cast<int>(0));
 	if (ImGui::CollapsingHeader("Blinn Phong Lighting")) {
