@@ -40,6 +40,7 @@ private:
 
 	vector<MyMesh> m_roomMeshes;
 	vector<MyMesh> m_triceMeshes;
+	vector<MyMesh> m_sphere;
 
 	mat4 m_modelMat = mat4(1.0);
 	mat4 m_projMat = mat4(1.0);
@@ -96,6 +97,8 @@ private:
 	}pointLight_shadowmap;
 
 	// ==============================
+	// geometry of some light source, 
+	// the transformation will be set up from the parameter in scenemanager
 	struct {
 		GLuint vao;
 		GLuint vbo_position;
@@ -103,8 +106,44 @@ private:
 		float width;
 		vec3 center;
 		vec3 color;
-		mat4 model_mat;
-	}area_light; 
+		
+		mat4 model_mat() {
+			vec3 translate_vector = SceneManager::Instance()->renderFeature.areaLight.lightPos;
+			vec2 rotate_vector = SceneManager::Instance()->renderFeature.areaLight.lightRotate;
+			mat4 matrix = translate(mat4(1.0f), translate_vector) * 
+						  rotate(mat4(1.0), rotate_vector.y, vec3(0.0 ,1.0 ,0.0)) * 
+						  rotate(mat4(1.0), rotate_vector.x, vec3(1.0 ,0.0 ,0.0)) * 
+						  translate(mat4(1.0f), - center);
+			return matrix;
+		}
 
+		// corner[0]: left upper
+		// corner[1]: left bottom
+		// corner[2]: right bottom
+		// corner[3]: right upper
+		mat4 corner() {
+			float top = center.y + height * 0.5f;
+			float bottom = center.y - height * 0.5f;
+			float right = center.x + width * 0.5f;
+			float left = center.x - width * 0.5f;
+
+			vec4 col0 = vec4( vec3(model_mat() * vec4(left, top, center.z, 1.0)), 1.0);
+			vec4 col1 = vec4( vec3(model_mat() * vec4(left, bottom, center.z, 1.0)), 1.0);
+			vec4 col2 = vec4( vec3(model_mat() * vec4(right, bottom, center.z, 1.0)), 1.0);
+			vec4 col3 = vec4( vec3(model_mat() * vec4(right, top, center.z, 1.0)), 1.0);
+
+			return mat4(col0, col1, col2, col3);
+		}
+	}areaLight_rect; 
+
+	struct {
+		vector<MyMesh> sphere_mesh;
+		mat4 model_mat() {
+			vec3 translate_vector = SceneManager::Instance()->renderFeature.pointLight.lightPos;
+			vec3 scale_vector = vec3(0.35);
+			mat4 matrix = translate(mat4(1.0f), translate_vector) * scale(mat4(1.0f), scale_vector);
+			return matrix;
+		}
+	}pointLight_sphere;
 };
 

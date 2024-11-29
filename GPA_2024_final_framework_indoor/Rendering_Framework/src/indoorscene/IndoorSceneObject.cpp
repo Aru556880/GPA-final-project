@@ -13,6 +13,7 @@ using std::string;
 string room1_filepath = "assets/indoor/Grey_White_Room_new.obj";
 string room2_filepath = "assets/indoor/Grey_White_Room_old.obj";
 string trice_filepath = "assets/indoor/trice.obj";
+string sphere_filepath = "assets/indoor/Sphere.obj";
 
 void LoadMeshModel(vector<MyMesh>& , string, uint, uint);
 
@@ -40,34 +41,34 @@ bool IndoorSceneObject::init() {
 	LoadMeshModel(this->m_triceMeshes, trice_filepath, 0, 1);
 	LoadMeshModel(this->m_roomMeshes, room1_filepath, 0, 21);
 	LoadMeshModel(this->m_roomMeshes, room2_filepath, 65, 68);
+	LoadMeshModel(this->m_sphere, sphere_filepath, 0, 1);
 
 	// initialize area light rectangle
-	area_light.center = vec3(1.0f, 0.5f, -0.5f);
-	area_light.height = 1.0f;
-	area_light.width = 1.0f;
-	area_light.color = vec3(0.8f, 0.6f, 0.0f);
-	area_light.model_mat = mat4(1.0);
-
+	areaLight_rect.center = SceneManager::Instance()->renderFeature.areaLight.lightPos;
+	areaLight_rect.height = 1.0f;
+	areaLight_rect.width = 1.0f;
+	areaLight_rect.color = vec3(0.8f, 0.6f, 0.0f);
+	/*
 	float area_light_data[18] = {
-		area_light.center.x + area_light.width * 0.5f , area_light.center.y + area_light.height * 0.5f, area_light.center.z,
+		areaLight_rect.center.x + areaLight_rect.width * 0.5f , areaLight_rect.center.y + areaLight_rect.height * 0.5f, areaLight_rect.center.z,
 
-		area_light.center.x - area_light.width * 0.5f, area_light.center.y + area_light.height * 0.5f, area_light.center.z,
+		areaLight_rect.center.x - areaLight_rect.width * 0.5f, areaLight_rect.center.y + areaLight_rect.height * 0.5f, areaLight_rect.center.z,
 
-		area_light.center.x - area_light.width * 0.5f, area_light.center.y - area_light.height * 0.5, area_light.center.z,
+		areaLight_rect.center.x - areaLight_rect.width * 0.5f, areaLight_rect.center.y - areaLight_rect.height * 0.5, areaLight_rect.center.z,
 
-		area_light.center.x + area_light.width * 0.5f, area_light.center.y + area_light.height * 0.5f, area_light.center.z,
+		areaLight_rect.center.x + areaLight_rect.width * 0.5f, areaLight_rect.center.y + areaLight_rect.height * 0.5f, areaLight_rect.center.z,
 
-		area_light.center.x + area_light.width * 0.5f, area_light.center.y - area_light.height * 0.5, area_light.center.z,
+		areaLight_rect.center.x + areaLight_rect.width * 0.5f, areaLight_rect.center.y - areaLight_rect.height * 0.5, areaLight_rect.center.z,
 
-		area_light.center.x - area_light.width * 0.5f, area_light.center.y - area_light.height * 0.5, area_light.center.z,
-	};
+		areaLight_rect.center.x - areaLight_rect.width * 0.5f, areaLight_rect.center.y - areaLight_rect.height * 0.5, areaLight_rect.center.z,
+	};*/
 
-	glGenVertexArrays(1, &area_light.vao);
-	glBindVertexArray(area_light.vao);
-	glGenBuffers(1, &area_light.vbo_position);
-	glBindBuffer(GL_ARRAY_BUFFER, area_light.vbo_position);
+	glGenVertexArrays(1, &areaLight_rect.vao);
+	glBindVertexArray(areaLight_rect.vao);
+	glGenBuffers(1, &areaLight_rect.vbo_position);
+	glBindBuffer(GL_ARRAY_BUFFER, areaLight_rect.vbo_position);
 
-	glBufferData(GL_ARRAY_BUFFER, 18 * sizeof(GL_FLOAT), area_light_data, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 18 * sizeof(GL_FLOAT), NULL, GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(0);
 
@@ -354,20 +355,40 @@ void IndoorSceneObject::deferred_update() {
 		glDrawElements(GL_TRIANGLES, m_triceMeshes[i].drawCount, GL_UNSIGNED_INT, nullptr);
 	}
 
+	// draw area light rectangle
 	if (SceneManager::Instance()->renderFeature.areaLight.enableLight) {
 		glUniform1i(SceneManager::Instance()->m_useNormalMapHandle, 0);
 		glUniform1f(glGetUniformLocation(m_geometryProgram->programId(), "modelType"), -1.0);
 
-		// calculate model transform of area light from the area light parameter from scenemanager
-		// area_light.center = initial area light position
-		vec3 translate_vector = SceneManager::Instance()->renderFeature.areaLight.lightPos - area_light.center;
-		area_light.model_mat = translate(mat4(1.0f), translate_vector);
-		glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(area_light.model_mat));
-		glBindVertexArray(area_light.vao);
+		float area_light_data[18] = {
+		areaLight_rect.corner()[3].x , areaLight_rect.corner()[3].y, areaLight_rect.corner()[3].z,
+		areaLight_rect.corner()[0].x , areaLight_rect.corner()[0].y, areaLight_rect.corner()[0].z,
+		areaLight_rect.corner()[1].x , areaLight_rect.corner()[1].y, areaLight_rect.corner()[1].z,
+
+		areaLight_rect.corner()[1].x , areaLight_rect.corner()[1].y, areaLight_rect.corner()[1].z,
+		areaLight_rect.corner()[2].x , areaLight_rect.corner()[2].y, areaLight_rect.corner()[2].z,
+		areaLight_rect.corner()[3].x , areaLight_rect.corner()[3].y, areaLight_rect.corner()[3].z,
+		};
+
+		// update area light rect corner
+		glBindBuffer(GL_ARRAY_BUFFER, areaLight_rect.vbo_position);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, 18 * sizeof(GL_FLOAT), area_light_data);
+
+		glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(mat4(1.0)));
+		glBindVertexArray(areaLight_rect.vao);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 	}
 
+	// draw point light sphere
+	if (SceneManager::Instance()->renderFeature.pointLight.enableLight) {
+		glUniform1i(SceneManager::Instance()->m_useNormalMapHandle, 0);
+		glUniform1f(glGetUniformLocation(m_geometryProgram->programId(), "modelType"), -2.0);
+		glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(pointLight_sphere.model_mat()));
+		glBindVertexArray(m_sphere[0].vao);
+		glDrawElements(GL_TRIANGLES, m_sphere[0].drawCount, GL_UNSIGNED_INT, nullptr);
+	}
 
+	// ====================================================
 	// deferred pass:
 	
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -396,6 +417,9 @@ void IndoorSceneObject::deferred_update() {
 	glUniform3fv(glGetUniformLocation(m_deferredProgram->programId(), "pointLightPos"), 1, value_ptr(SceneManager::Instance()->renderFeature.pointLight.lightPos));
 	glUniform3fv(glGetUniformLocation(m_deferredProgram->programId(), "areaLightPos"), 1, value_ptr(SceneManager::Instance()->renderFeature.areaLight.lightPos));
 	
+	// area light corner position
+	glUniformMatrix4fv(glGetUniformLocation(m_deferredProgram->programId(), "areaLightCornerPos"), 1, false, value_ptr(areaLight_rect.corner()));
+
 	// gbuffer texture
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, gbuffer.position_map);

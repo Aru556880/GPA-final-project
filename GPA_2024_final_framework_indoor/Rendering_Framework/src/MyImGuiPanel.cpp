@@ -23,7 +23,8 @@ void MyImGuiPanel::update() {
 
 	ImGui::SliderFloat3("Eye Position", &(m_cameraManager->playerViewOrig_ref()->x), -5.0, 5.0);
 	ImGui::SliderFloat3("Look Center", &(m_cameraManager->playerCameraLookCenter_ref()->x), -5.0, 5.0);
-
+	ImGui::Checkbox("Enable Normal Map", &SceneManager::Instance()->renderFeature.enableNormalMap);
+	
 	ImGui::PushID(static_cast<int>(0));
 	if (ImGui::CollapsingHeader("Blinn Phong Lighting")) {
 		ImGui::SliderFloat3("Light Position", &(SceneManager::Instance()->renderFeature.blinnPhongLight.lightPos[0]), -5.0f, 5.0f);
@@ -42,6 +43,7 @@ void MyImGuiPanel::update() {
 
 	ImGui::PushID(static_cast<int>(2));
 	if (ImGui::CollapsingHeader("Area Light")) {
+		ImGui::SliderFloat2("Rotation", &(SceneManager::Instance()->renderFeature.areaLight.lightRotate[0]), -5.0f, 5.0f);
 		ImGui::SliderFloat3("Light Position", &(SceneManager::Instance()->renderFeature.areaLight.lightPos[0]), -5.0f, 5.0f);
 		ImGui::Checkbox("Enable Light", &SceneManager::Instance()->renderFeature.areaLight.enableLight);
 	}

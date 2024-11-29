@@ -79,6 +79,7 @@ public:
 
 		struct {
 			bool enableLight = false;
+			vec2 lightRotate = vec2(0.0, 0.0);
 			vec3 lightPos = vec3(1.0f, 0.5f, -0.5f);
 		}areaLight;
 

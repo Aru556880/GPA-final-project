@@ -64,10 +64,10 @@ void MyCameraManager::keyPress(const RenderWidgetKeyCode key) {
 		this->m_DPressedFlag = true;
 	}
 	else if (key == RenderWidgetKeyCode::KEY_Z) {
-		this->m_playerCameraHeightOffset = 0.1;
+		this->m_playerCameraHeightOffset = 0.025;
 	}
 	else if (key == RenderWidgetKeyCode::KEY_X) {
-		this->m_playerCameraHeightOffset = -0.1;
+		this->m_playerCameraHeightOffset = -0.025;
 	}	
 	else if (key == RenderWidgetKeyCode::KEY_T) {
 		SceneManager::Instance()->m_test_meshcount += 1;

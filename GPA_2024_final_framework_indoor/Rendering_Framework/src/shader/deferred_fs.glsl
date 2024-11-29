@@ -31,6 +31,7 @@ uniform int enableAreaLight;
 uniform vec3 blinnPhongLightPos;
 uniform vec3 pointLightPos;
 uniform vec3 areaLightPos;
+uniform mat4 areaLightCornerPos;
 
 in VS_OUT                                                                   
 {                                                                        
@@ -57,15 +58,19 @@ vec3 CalculatePlaneIntersection(vec3 viewPosition, vec3 reflectionVector, vec3 l
 void main(){
     // see comment in geometry_fs for modelType id
     float modelType = texture(position_map, fs_in.texcoord).a;
-    bool useNormalMap = texture(normalTexture_map, fs_in.texcoord).a > 0;
+    bool useNormalMap = texture(normalTexture_map, fs_in.texcoord).a * enableNormalMap > 0;
     vec3 final_color = vec3(0);
 
-    if(modelType == -1.0){
+    if(modelType == 1.0){
+        frag_color = vec4(0.8,0.8,0.8,1.0);
+    }
+    else if(modelType == -1.0){
         frag_color = vec4(0.8, 0.6, 0.0, 1.0);
         return;
     }
-    else if(modelType == 1.0){
-        frag_color = vec4(0.8,0.8,0.8,1.0);
+    else if(modelType == -2.0){
+        frag_color = vec4(1.0);
+        return;
     }
 
 	vec3 world_position = texture(position_map, fs_in.texcoord).rgb;
@@ -217,16 +222,16 @@ vec3 AreaLightColor(vec4 view_position, vec3 normal, vec3 viewDir, vec3 diffuseF
 
     // left upper
     vec4 light_cornerPos_view0
-        = viewMat * vec4( arealight_worldpos + vec3( - rect_w * 0.5, rect_h * 0.5, 0), 1.0);
+        = viewMat * vec4( areaLightCornerPos[0].xyz, 1.0);
     // left bottom
     vec4 light_cornerPos_view1 
-        = viewMat * vec4( arealight_worldpos + vec3( - rect_w * 0.5, - rect_h * 0.5, 0), 1.0);
+        = viewMat * vec4( areaLightCornerPos[1].xyz, 1.0);
     // right bottom
     vec4 light_cornerPos_view2 
-        = viewMat * vec4( arealight_worldpos + vec3( rect_w * 0.5, - rect_h * 0.5, 0), 1.0);
+        = viewMat * vec4( areaLightCornerPos[2].xyz, 1.0);
     // right upper
     vec4 light_cornerPos_view3 
-        = viewMat * vec4( arealight_worldpos + vec3( rect_w * 0.5, rect_h * 0.5, 0), 1.0);
+        = viewMat * vec4( areaLightCornerPos[3].xyz, 1.0);
     // light center in view sapce
     vec4 light_centerPos = viewMat * vec4(arealight_worldpos, 1.0);
 
