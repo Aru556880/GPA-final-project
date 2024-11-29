@@ -1,6 +1,7 @@
 #version 430 core
 
 layout (location = 0) out vec4 frag_color;
+layout (location = 1) out vec4 bright_color;
                                           
 layout (binding = 0) uniform sampler2D position_map;   // in world space   
 layout (binding = 1) uniform sampler2D normal_map;     // in world space, gbuffer normal map
@@ -25,6 +26,7 @@ uniform int enableDirLightShadow;
 uniform int enablePointLight;
 uniform int enablePointLightShadow;
 uniform int enableAreaLight;
+uniform int enableDifferedMap;
 
 
 // light in world space
@@ -144,12 +146,23 @@ void main(){
             break;
     }
 
+    if(enableDifferedMap == 1){
+        frag_color = vec4(color, 1.0);
+        return;
+    }
 
     final_color = enablePhongLight * blinnPhongColor * (1.0 - dirLightShadow * enableDirLightShadow)+ 
                   enablePointLight * pointLightColor * (1.0 - pointLightShadow * enablePointLightShadow)+ 
                   enableAreaLight * areaLightColor;
 
     frag_color = vec4(final_color, 1.0);
+    float brightness = dot(frag_color.rgb, vec3(0.2126, 0.7152, 0.0722));
+    if(brightness > 1.0)
+        // bright_color = vec4(frag_color.rgb, 1.0);
+        bright_color = vec4(1.0);
+    else
+        bright_color = vec4(0.0, 0.0, 0.0, 1.0);
+    // bright_color = frag_color;
 }
 
 vec3 BlinnPhongLightColor(vec3 worldLightPos, vec3 viewNormal, vec3 viewFragPosition, bool useNormalMap) {

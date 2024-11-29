@@ -26,9 +26,11 @@ private:
 
 	void deferred_update();
 	void shadowmap_update();
+	void post_process_update();
 
 	bool deferred_init();
 	bool shadowmap_init();
+	bool post_process_init();
 public:
 	
 
@@ -57,6 +59,10 @@ private:
 
 	ShaderProgram* m_blinnphongProgram;
 
+	// post-process programs
+	ShaderProgram* m_bloomProgram;
+	ShaderProgram* m_blurProgram;
+
 	// deferred program variables
 	struct
 	{
@@ -72,6 +78,16 @@ private:
 		GLuint depth_map;
 		GLuint vao;
 	} gbuffer;
+	// ===============================
+	// post-process program variables
+	struct
+	{
+		GLuint fbo;
+		GLuint scene;
+		GLuint bright_scene;
+	} post_process_buffer;
+	unsigned int pingpongFBO[2];
+	unsigned int pingpongBuffer[2];
 	// ===============================
 
 	// directional shadow mapping program variables

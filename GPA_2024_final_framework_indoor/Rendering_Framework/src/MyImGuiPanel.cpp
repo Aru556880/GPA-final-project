@@ -48,6 +48,24 @@ void MyImGuiPanel::update() {
 		ImGui::Checkbox("Enable Light", &SceneManager::Instance()->renderFeature.areaLight.enableLight);
 	}
 	ImGui::PopID();
+
+	ImGui::PushID(static_cast<int>(3));
+	if (ImGui::CollapsingHeader("Deferred Shading")) {
+		ImGui::Checkbox("Enable Deferred Map", &SceneManager::Instance()->renderFeature.deferredShading.enableDeferredMap);
+		if (ImGui::BeginCombo("Select Item", SceneManager::Instance()->renderFeature.deferredShading.items[SceneManager::Instance()->renderFeature.deferredShading.current_item])) {
+			for (int i = 0; i < 5; i++) {
+				bool is_selected = (SceneManager::Instance()->renderFeature.deferredShading.current_item == i);
+				if (ImGui::Selectable(SceneManager::Instance()->renderFeature.deferredShading.items[i], is_selected)) {
+					SceneManager::Instance()->renderFeature.deferredShading.current_item = i;
+				}
+				if (is_selected) {
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
+	}
+	ImGui::PopID();
 }
 
 void MyImGuiPanel::setAvgFPS(const double avgFPS){

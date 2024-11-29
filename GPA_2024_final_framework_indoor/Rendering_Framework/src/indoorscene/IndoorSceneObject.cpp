@@ -36,6 +36,7 @@ bool IndoorSceneObject::init() {
 
 	flag &= deferred_init();
 	flag &= shadowmap_init();
+	flag &= post_process_init();
 
 	// load wood table meshes and other meshes separately
 	LoadMeshModel(this->m_triceMeshes, trice_filepath, 0, 1);
@@ -214,6 +215,56 @@ bool IndoorSceneObject::shadowmap_init()
 	return flag;
 }
 
+bool IndoorSceneObject::post_process_init() {
+	bool flag = true;
+	flag &= setShaderProgram(m_bloomProgram, "deferred_vs.glsl", "", "bloom_fs.glsl");
+	flag &= setShaderProgram(m_blurProgram, "deferred_vs.glsl", "", "blur_fs.glsl");
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
+
+	// set up framebuffer to render scene to
+	glGenFramebuffers(1, &post_process_buffer.fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, post_process_buffer.fbo);
+
+	glGenTextures(1, &post_process_buffer.scene);
+	glBindTexture(GL_TEXTURE_2D, post_process_buffer.scene);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 256, 256, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	glGenTextures(1, &post_process_buffer.bright_scene);
+	glBindTexture(GL_TEXTURE_2D, post_process_buffer.bright_scene);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 256, 256, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	// attach texture to framebuffer
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, post_process_buffer.scene, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, post_process_buffer.bright_scene, 0);
+
+	// for blurring image
+	
+	glGenFramebuffers(2, pingpongFBO);
+	glGenTextures(2, pingpongBuffer);
+	for (unsigned int i = 0; i < 2; i++)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[i]);
+		glBindTexture(GL_TEXTURE_2D, pingpongBuffer[i]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 256, 256, 0, GL_RGBA, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingpongBuffer[i], 0);
+	}
+
+	return flag;
+}
+
 // if no geometry shader, just pass an empty string
 bool IndoorSceneObject::setShaderProgram(ShaderProgram*& m_shaderProgram, string vs,string gs, string fs)
 {
@@ -291,12 +342,24 @@ void IndoorSceneObject::resize(int w, int h) {
 	glBindTexture(GL_TEXTURE_2D, gbuffer.depth_map);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, w, h, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 
+	glBindTexture(GL_TEXTURE_2D, post_process_buffer.scene);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
+
+	glBindTexture(GL_TEXTURE_2D, post_process_buffer.bright_scene);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
+
+	glBindTexture(GL_TEXTURE_2D, pingpongBuffer[0]);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
+
+	glBindTexture(GL_TEXTURE_2D, pingpongBuffer[1]);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
 }
 
 void IndoorSceneObject::update(){
 
 	this->shadowmap_update();
 	this->deferred_update();
+	this->post_process_update();
 }
 
 
@@ -390,9 +453,15 @@ void IndoorSceneObject::deferred_update() {
 
 	// ====================================================
 	// deferred pass:
-	
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glDrawBuffer(GL_BACK);
+	if (SceneManager::Instance()->renderFeature.pointLight.enableLight) {
+		glBindFramebuffer(GL_FRAMEBUFFER, post_process_buffer.fbo);
+		unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+		glDrawBuffers(2, attachments);
+	}
+	else {
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glDrawBuffer(GL_BACK);
+	}
 
 	m_deferredProgram->useProgram();
 	glBindVertexArray(gbuffer.vao);
@@ -411,6 +480,10 @@ void IndoorSceneObject::deferred_update() {
 	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "enablePointLight"), SceneManager::Instance()->renderFeature.pointLight.enableLight);
 	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "enablePointLightShadow"), SceneManager::Instance()->renderFeature.pointLight.enableShadow);
 	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "enableAreaLight"), SceneManager::Instance()->renderFeature.areaLight.enableLight);
+	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "enableDifferedMap"), SceneManager::Instance()->renderFeature.deferredShading.enableDeferredMap);
+	
+	// deferred_map_type
+	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "deferred_map_type"), SceneManager::Instance()->renderFeature.deferredShading.current_item);
 
 	// light position
 	glUniform3fv(glGetUniformLocation(m_deferredProgram->programId(), "blinnPhongLightPos"), 1, value_ptr(SceneManager::Instance()->renderFeature.blinnPhongLight.lightPos));
@@ -449,7 +522,45 @@ void IndoorSceneObject::deferred_update() {
 	glBindTexture(GL_TEXTURE_CUBE_MAP, pointLight_shadowmap.depth_cubeMap);
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+}
 
+void IndoorSceneObject::post_process_update() {
+	
+	if (!SceneManager::Instance()->renderFeature.pointLight.enableLight) return;
+
+	// blur effect pass
+	bool horizontal = true, first_iteration = true;
+	int amount = 10;
+	m_blurProgram->useProgram();
+	for (unsigned int i = 0; i < amount; i++)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
+		glUniform1i(glGetUniformLocation(m_blurProgram->programId(), "horizontal"), horizontal);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, first_iteration ? post_process_buffer.bright_scene : pingpongBuffer[!horizontal]);
+		
+		glBindVertexArray(gbuffer.vao);
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+		
+		horizontal = !horizontal;
+		if (first_iteration)
+			first_iteration = false;
+	}
+
+	// bloom effect pass
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glDrawBuffer(GL_BACK);
+
+	m_bloomProgram->useProgram();
+	glBindVertexArray(gbuffer.vao);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, post_process_buffer.scene);
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, pingpongBuffer[1]);
+
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 
 void IndoorSceneObject::shadowmap_update(){

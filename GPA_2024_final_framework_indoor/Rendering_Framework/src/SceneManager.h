@@ -83,6 +83,12 @@ public:
 			vec3 lightPos = vec3(1.0f, 0.5f, -0.5f);
 		}areaLight;
 
+		struct {
+			bool enableDeferredMap = false;
+			const char* items[5] = { "world space vertex", "world space normal", "ambient color map", "diffuse color map", "specular color map" };
+			int current_item = 0;
+		}deferredShading;
+
 	}renderFeature;
 };
 
