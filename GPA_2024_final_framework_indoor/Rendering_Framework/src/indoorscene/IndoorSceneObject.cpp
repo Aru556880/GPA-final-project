@@ -249,18 +249,18 @@ bool IndoorSceneObject::post_process_init() {
 
 	// for blurring image
 	
-	glGenFramebuffers(2, pingpongFBO);
-	glGenTextures(2, pingpongBuffer);
+	glGenFramebuffers(2, pingpong.fbo);
+	glGenTextures(2, pingpong.buffer);
 	for (unsigned int i = 0; i < 2; i++)
 	{
-		glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[i]);
-		glBindTexture(GL_TEXTURE_2D, pingpongBuffer[i]);
+		glBindFramebuffer(GL_FRAMEBUFFER, pingpong.fbo[i]);
+		glBindTexture(GL_TEXTURE_2D, pingpong.buffer[i]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 256, 256, 0, GL_RGBA, GL_FLOAT, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingpongBuffer[i], 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingpong.buffer[i], 0);
 	}
 
 	return flag;
@@ -349,10 +349,10 @@ void IndoorSceneObject::resize(int w, int h) {
 	glBindTexture(GL_TEXTURE_2D, post_process_buffer.bright_scene);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
 
-	glBindTexture(GL_TEXTURE_2D, pingpongBuffer[0]);
+	glBindTexture(GL_TEXTURE_2D, pingpong.buffer[0]);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
 
-	glBindTexture(GL_TEXTURE_2D, pingpongBuffer[1]);
+	glBindTexture(GL_TEXTURE_2D, pingpong.buffer[1]);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
 }
 
@@ -537,29 +537,29 @@ void IndoorSceneObject::deferred_update() {
 }
 
 void IndoorSceneObject::post_process_update() {
-	
+	pingpong.first = true;
+
 	if (SceneManager::Instance()->renderFeature.postProcess.enableBloomEffect) {
 		// blur effect pass
-		bool horizontal = true, first_iteration = true;
 		int amount = 5;
 		m_blurProgram->useProgram();
 		for (unsigned int i = 0; i < amount; i++)
 		{
-			glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
-			glUniform1i(glGetUniformLocation(m_blurProgram->programId(), "horizontal"), horizontal);
+			glBindFramebuffer(GL_FRAMEBUFFER, pingpong.fbo[pingpong.now]);
+			glUniform1i(glGetUniformLocation(m_blurProgram->programId(), "horizontal"), pingpong.now);
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, first_iteration ? post_process_buffer.bright_scene : pingpongBuffer[!horizontal]);
+			glBindTexture(GL_TEXTURE_2D, pingpong.first ? post_process_buffer.bright_scene : pingpong.buffer[!pingpong.now]);
 
 			glBindVertexArray(gbuffer.vao);
 			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-			horizontal = !horizontal;
-			if (first_iteration)
-				first_iteration = false;
+			pingpong.now = !pingpong.now;
+			if (pingpong.first)
+				pingpong.first = false;
 		}
 
 		// bloom effect pass
-		glBindFramebuffer(GL_FRAMEBUFFER, post_process_buffer.fbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, pingpong.fbo[pingpong.now]);
 
 		m_bloomProgram->useProgram();
 		glBindVertexArray(gbuffer.vao);
@@ -568,14 +568,16 @@ void IndoorSceneObject::post_process_update() {
 		glBindTexture(GL_TEXTURE_2D, post_process_buffer.scene);
 
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, pingpongBuffer[1]);
+		glBindTexture(GL_TEXTURE_2D, pingpong.buffer[!pingpong.now]);
 
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+		pingpong.now = !pingpong.now;
 	}
 
 	if (SceneManager::Instance()->renderFeature.postProcess.enableVolumetricLight) {
 		// Volumetric light pass
-		glBindFramebuffer(GL_FRAMEBUFFER, post_process_buffer.fbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, pingpong.fbo[pingpong.now]);
 
 		m_volumetricProgram->useProgram();
 		glBindVertexArray(gbuffer.vao);
@@ -583,12 +585,16 @@ void IndoorSceneObject::post_process_update() {
 		glUniform2f(glGetUniformLocation(m_volumetricProgram->programId(), "screen_light_pos"), screen_light_pos().x, screen_light_pos().y);
 
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, post_process_buffer.scene);
+		glBindTexture(GL_TEXTURE_2D, pingpong.first ? post_process_buffer.scene : pingpong.buffer[!pingpong.now]);
 
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, post_process_buffer.bright_scene);
 
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+		pingpong.now = !pingpong.now;
+		if (pingpong.first)
+			pingpong.first = false;
 	}
 
 	// FXAA pass
@@ -601,7 +607,7 @@ void IndoorSceneObject::post_process_update() {
 	glUniform1i(glGetUniformLocation(m_fxaaProgram->programId(), "enableFXAA"), SceneManager::Instance()->renderFeature.postProcess.enableFXAA);
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, post_process_buffer.scene);
+	glBindTexture(GL_TEXTURE_2D, pingpong.first ? post_process_buffer.scene : pingpong.buffer[!pingpong.now]);
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }

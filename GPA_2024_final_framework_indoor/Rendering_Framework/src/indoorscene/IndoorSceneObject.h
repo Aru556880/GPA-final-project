@@ -88,8 +88,15 @@ private:
 		GLuint scene;
 		GLuint bright_scene;
 	} post_process_buffer;
-	unsigned int pingpongFBO[2];
-	unsigned int pingpongBuffer[2];
+
+	struct
+	{
+		GLuint fbo[2];
+		GLuint buffer[2];
+		bool now = true;
+		bool first = true;
+	} pingpong;
+	
 	vec2 screen_light_pos() {
 		vec4 clip_space_pos = m_projMat * m_viewMat * vec4(light_sphere.volumetricLightPos, 1.0);
 		vec3 ndc_space_pos = vec3(clip_space_pos) / clip_space_pos.w;
