@@ -10,7 +10,7 @@ in VS_OUT
 	vec2 texcoord;                                                       
 }fs_in;      
 
-float exposure = 0.1f;
+float exposure = 0.5f;
 
 void main(){
 

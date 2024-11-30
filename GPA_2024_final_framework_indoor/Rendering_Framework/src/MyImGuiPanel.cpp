@@ -24,9 +24,15 @@ void MyImGuiPanel::update() {
 	ImGui::SliderFloat3("Eye Position", &(m_cameraManager->playerViewOrig_ref()->x), -5.0, 5.0);
 	ImGui::SliderFloat3("Look Center", &(m_cameraManager->playerCameraLookCenter_ref()->x), -5.0, 5.0);
 	ImGui::Checkbox("Enable Normal Map", &SceneManager::Instance()->renderFeature.enableNormalMap);
-	ImGui::Checkbox("Enable FXAA", &SceneManager::Instance()->renderFeature.enableFXAA);
 	
 	ImGui::PushID(static_cast<int>(0));
+	if (ImGui::CollapsingHeader("Post Process")) {
+		ImGui::Checkbox("Enable FXAA", &SceneManager::Instance()->renderFeature.postProcess.enableFXAA);
+		ImGui::Checkbox("Enable Bloom Effect", &SceneManager::Instance()->renderFeature.postProcess.enableBloomEffect);
+	}
+	ImGui::PopID();
+
+	ImGui::PushID(static_cast<int>(1));
 	if (ImGui::CollapsingHeader("Blinn Phong Lighting")) {
 		ImGui::SliderFloat3("Light Position", &(SceneManager::Instance()->renderFeature.blinnPhongLight.lightPos[0]), -5.0f, 5.0f);
 		ImGui::Checkbox("Enable Light", &SceneManager::Instance()->renderFeature.blinnPhongLight.enableLight);
@@ -34,7 +40,7 @@ void MyImGuiPanel::update() {
 	}
 	ImGui::PopID();
 
-	ImGui::PushID(static_cast<int>(1));
+	ImGui::PushID(static_cast<int>(2));
 	if (ImGui::CollapsingHeader("Point Light")) {
 		ImGui::SliderFloat3("Light Position", &(SceneManager::Instance()->renderFeature.pointLight.lightPos[0]), -5.0f, 5.0f);
 		ImGui::Checkbox("Enable Light", &SceneManager::Instance()->renderFeature.pointLight.enableLight);
@@ -42,7 +48,7 @@ void MyImGuiPanel::update() {
 	}
 	ImGui::PopID();
 
-	ImGui::PushID(static_cast<int>(2));
+	ImGui::PushID(static_cast<int>(3));
 	if (ImGui::CollapsingHeader("Area Light")) {
 		ImGui::SliderFloat2("Rotation", &(SceneManager::Instance()->renderFeature.areaLight.lightRotate[0]), -5.0f, 5.0f);
 		ImGui::SliderFloat3("Light Position", &(SceneManager::Instance()->renderFeature.areaLight.lightPos[0]), -5.0f, 5.0f);
@@ -50,7 +56,7 @@ void MyImGuiPanel::update() {
 	}
 	ImGui::PopID();
 
-	ImGui::PushID(static_cast<int>(3));
+	ImGui::PushID(static_cast<int>(4));
 	if (ImGui::CollapsingHeader("Deferred Shading")) {
 		ImGui::Checkbox("Enable Deferred Map", &SceneManager::Instance()->renderFeature.deferredShading.enableDeferredMap);
 		if (ImGui::BeginCombo("Select Item", SceneManager::Instance()->renderFeature.deferredShading.items[SceneManager::Instance()->renderFeature.deferredShading.current_item])) {

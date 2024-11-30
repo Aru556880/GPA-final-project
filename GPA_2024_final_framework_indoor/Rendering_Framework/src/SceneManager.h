@@ -64,7 +64,16 @@ public:
 
 	struct {
 		bool enableNormalMap = false;
-		bool enableFXAA = false;
+
+		struct {
+			bool enableFXAA = false;
+			bool enableBloomEffect = false;
+		}postProcess;
+
+		bool enablePostProcess() {
+			return !deferredShading.enableDeferredMap &&
+				   ( postProcess.enableBloomEffect || postProcess.enableFXAA );
+		}
 
 		struct {
 			bool enableLight = false;

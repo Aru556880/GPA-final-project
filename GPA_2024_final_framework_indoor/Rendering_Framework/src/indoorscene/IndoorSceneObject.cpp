@@ -84,8 +84,6 @@ bool IndoorSceneObject::init() {
 			translate(mat4(1.0f), vec3(2.05, 0.628725, -1.9)) * scale(mat4(1.0f), vec3(0.001f, 0.001f, 0.001f)) ;
 	}
 
-	glClearColor(0.2, 0.2, 0.2, 1.0);
-
 	return flag;
 }
 /////////////////////////////////////////////////////////
@@ -361,7 +359,10 @@ void IndoorSceneObject::update(){
 
 	this->shadowmap_update();
 	this->deferred_update();
-	this->post_process_update();
+	if (SceneManager::Instance()->renderFeature.enablePostProcess()) {
+		this->post_process_update();
+	}
+	
 }
 
 
@@ -377,7 +378,7 @@ void IndoorSceneObject::deferred_update() {
 	glDrawBuffers(7, draw_buffers);
 	
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glClearColor(1.0,1.0,1.0, 1.0);
+	glClearColor(0.2,0.2,0.2, 1.0);
 	m_geometryProgram->useProgram();
 
 	glUniformMatrix4fv(SceneManager::Instance()->m_projMatHandle, 1, false, glm::value_ptr(this->m_projMat));
@@ -426,13 +427,13 @@ void IndoorSceneObject::deferred_update() {
 		glUniform1f(glGetUniformLocation(m_geometryProgram->programId(), "modelType"), -1.0);
 
 		float area_light_data[18] = {
-		areaLight_rect.corner()[3].x , areaLight_rect.corner()[3].y, areaLight_rect.corner()[3].z,
-		areaLight_rect.corner()[0].x , areaLight_rect.corner()[0].y, areaLight_rect.corner()[0].z,
-		areaLight_rect.corner()[1].x , areaLight_rect.corner()[1].y, areaLight_rect.corner()[1].z,
+			areaLight_rect.corner()[3].x , areaLight_rect.corner()[3].y, areaLight_rect.corner()[3].z,
+			areaLight_rect.corner()[0].x , areaLight_rect.corner()[0].y, areaLight_rect.corner()[0].z,
+			areaLight_rect.corner()[1].x , areaLight_rect.corner()[1].y, areaLight_rect.corner()[1].z,
 
-		areaLight_rect.corner()[1].x , areaLight_rect.corner()[1].y, areaLight_rect.corner()[1].z,
-		areaLight_rect.corner()[2].x , areaLight_rect.corner()[2].y, areaLight_rect.corner()[2].z,
-		areaLight_rect.corner()[3].x , areaLight_rect.corner()[3].y, areaLight_rect.corner()[3].z,
+			areaLight_rect.corner()[1].x , areaLight_rect.corner()[1].y, areaLight_rect.corner()[1].z,
+			areaLight_rect.corner()[2].x , areaLight_rect.corner()[2].y, areaLight_rect.corner()[2].z,
+			areaLight_rect.corner()[3].x , areaLight_rect.corner()[3].y, areaLight_rect.corner()[3].z,
 		};
 
 		// update area light rect corner
@@ -455,9 +456,15 @@ void IndoorSceneObject::deferred_update() {
 
 	// ====================================================
 	// deferred pass:
-	glBindFramebuffer(GL_FRAMEBUFFER, post_process_buffer.fbo);
-	unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
-	glDrawBuffers(2, attachments);
+	if (SceneManager::Instance()->renderFeature.enablePostProcess()) {
+		glBindFramebuffer(GL_FRAMEBUFFER, post_process_buffer.fbo);
+		unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+		glDrawBuffers(2, attachments);
+	}
+	else {
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glDrawBuffer(GL_BACK);
+	}
 
 	m_deferredProgram->useProgram();
 	glBindVertexArray(gbuffer.vao);
@@ -476,7 +483,7 @@ void IndoorSceneObject::deferred_update() {
 	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "enablePointLight"), SceneManager::Instance()->renderFeature.pointLight.enableLight);
 	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "enablePointLightShadow"), SceneManager::Instance()->renderFeature.pointLight.enableShadow);
 	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "enableAreaLight"), SceneManager::Instance()->renderFeature.areaLight.enableLight);
-	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "enableDifferedMap"), SceneManager::Instance()->renderFeature.deferredShading.enableDeferredMap);
+	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "enableDefferedMap"), SceneManager::Instance()->renderFeature.deferredShading.enableDeferredMap);
 	
 	// deferred_map_type
 	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "deferred_map_type"), SceneManager::Instance()->renderFeature.deferredShading.current_item);
@@ -522,10 +529,10 @@ void IndoorSceneObject::deferred_update() {
 
 void IndoorSceneObject::post_process_update() {
 	
-	if (SceneManager::Instance()->renderFeature.pointLight.enableLight) {
+	if (SceneManager::Instance()->renderFeature.postProcess.enableBloomEffect) {
 		// blur effect pass
 		bool horizontal = true, first_iteration = true;
-		int amount = 10;
+		int amount = 5;
 		m_blurProgram->useProgram();
 		for (unsigned int i = 0; i < amount; i++)
 		{
@@ -566,7 +573,7 @@ void IndoorSceneObject::post_process_update() {
 	m_fxaaProgram->useProgram();
 	glBindVertexArray(gbuffer.vao);
 
-	glUniform1i(glGetUniformLocation(m_fxaaProgram->programId(), "enableFXAA"), SceneManager::Instance()->renderFeature.enableFXAA);
+	glUniform1i(glGetUniformLocation(m_fxaaProgram->programId(), "enableFXAA"), SceneManager::Instance()->renderFeature.postProcess.enableFXAA);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, post_process_buffer.scene);

@@ -26,7 +26,7 @@ uniform int enableDirLightShadow;
 uniform int enablePointLight;
 uniform int enablePointLightShadow;
 uniform int enableAreaLight;
-uniform int enableDifferedMap;
+uniform int enableDefferedMap;
 
 
 // light in world space
@@ -64,14 +64,17 @@ void main(){
     vec3 final_color = vec3(0);
 
     if(modelType == 1.0){
-        frag_color = vec4(0.8,0.8,0.8,1.0);
+        frag_color = vec4(0.3,0.3,0.3,1.0);
+        return;
     }
     else if(modelType == -1.0){
         frag_color = vec4(0.8, 0.6, 0.0, 1.0);
+        bright_color = vec4(0.8, 0.6, 0.0, 1.0);
         return;
     }
     else if(modelType == -2.0){
         frag_color = vec4(1.0);
+        bright_color = vec4(1.0);
         return;
     }
 
@@ -108,61 +111,43 @@ void main(){
     // 3: area ligt
     vec3 areaLightColor = AreaLightColor(view_position, view_normal.xyz, - view_position.xyz, Kd);
 
-	vec3 color = vec3(0);
-    float shadow = 0;
 	switch (deferred_map_type) {
         case 0:
-            color = normalize(world_position) * 0.5 + 0.5;
+            final_color = normalize(world_position) * 0.5 + 0.5;
             break;
         case 1:
-            color = normalize(world_normal) * 0.5 + 0.5;
+            final_color = normalize(world_normal) * 0.5 + 0.5;
             break;
         case 2:
-            color = Ka;
+            final_color = Ka;
             break;
         case 3:
-            color = Kd;
+            final_color = Kd;
             break;
         case 4:
-            color = Ks;
-            break;
-        case 5:
-            color = blinnPhongColor;
-            break;
-        case 6: 
-            shadow = DirLightShadow(world_position);
-            color = (1.0-shadow) * blinnPhongColor; 
-            break;
-        case 7:
-            shadow = PointLightShadow(world_position);    
-            //color =  vec3(shadow); //DEBUG;
-            color = (1.0-shadow) * pointLightColor;
-            break;
-        case 8:
-            color = AreaLightColor(view_position, view_normal.xyz, - view_position.xyz, Kd) ;
+            final_color = Ks;
             break;
         default:
-            color = vec3(1.0);
+            final_color = vec3(1.0);
             break;
     }
 
-    if(enableDifferedMap == 1){
-        frag_color = vec4(color, 1.0);
+    if(enableDefferedMap == 1){
+        frag_color = vec4(final_color, 1.0);
         return;
     }
 
-    final_color = enablePhongLight * blinnPhongColor * (1.0 - dirLightShadow * enableDirLightShadow)+ 
-                  enablePointLight * pointLightColor * (1.0 - pointLightShadow * enablePointLightShadow)+ 
+    final_color = enablePhongLight * blinnPhongColor * (1.0 - dirLightShadow * enableDirLightShadow) + 
+                  enablePointLight * pointLightColor * (1.0 - pointLightShadow * enablePointLightShadow) + 
                   enableAreaLight * areaLightColor;
 
     frag_color = vec4(final_color, 1.0);
     float brightness = dot(frag_color.rgb, vec3(0.2126, 0.7152, 0.0722));
-    if(brightness > 1.0)
-        // bright_color = vec4(frag_color.rgb, 1.0);
-        bright_color = vec4(1.0);
+    if(brightness > 0.8)
+        bright_color = vec4(frag_color.rgb, 1.0);
+        //bright_color = vec4(1.0);
     else
         bright_color = vec4(0.0, 0.0, 0.0, 1.0);
-    // bright_color = frag_color;
 }
 
 vec3 BlinnPhongLightColor(vec3 worldLightPos, vec3 viewNormal, vec3 viewFragPosition, bool useNormalMap) {
