@@ -216,8 +216,9 @@ bool IndoorSceneObject::shadowmap_init()
 bool IndoorSceneObject::post_process_init() {
 	bool flag = true; 
 	flag &= setShaderProgram(m_bloomProgram, "deferred_vs.glsl", "", "bloom_fs.glsl");
-	flag &= setShaderProgram(m_blurProgram, "deferred_vs.glsl", "", "blur_fs.glsl");
+	flag &= setShaderProgram(m_blurProgram, "deferred_vs.glsl", "", "blur_fs.glsl"); 
 	flag &= setShaderProgram(m_fxaaProgram, "deferred_vs.glsl", "", "FXAA_fs.glsl");
+	flag &= setShaderProgram(m_volumetricProgram, "deferred_vs.glsl", "", "volumetric_fs.glsl");
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
@@ -449,7 +450,14 @@ void IndoorSceneObject::deferred_update() {
 	if (SceneManager::Instance()->renderFeature.pointLight.enableLight) {
 		glUniform1i(SceneManager::Instance()->m_useNormalMapHandle, 0);
 		glUniform1f(glGetUniformLocation(m_geometryProgram->programId(), "modelType"), -2.0);
-		glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(pointLight_sphere.model_mat()));
+		glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(light_sphere.model_mat(0)));
+		glBindVertexArray(m_sphere[0].vao);
+		glDrawElements(GL_TRIANGLES, m_sphere[0].drawCount, GL_UNSIGNED_INT, nullptr);
+	}
+	if (SceneManager::Instance()->renderFeature.postProcess.enableVolumetricLight) {
+		glUniform1i(SceneManager::Instance()->m_useNormalMapHandle, 0);
+		glUniform1f(glGetUniformLocation(m_geometryProgram->programId(), "modelType"), -2.0);
+		glUniformMatrix4fv(SceneManager::Instance()->m_modelMatHandle, 1, false, glm::value_ptr(light_sphere.model_mat(1)));
 		glBindVertexArray(m_sphere[0].vao);
 		glDrawElements(GL_TRIANGLES, m_sphere[0].drawCount, GL_UNSIGNED_INT, nullptr);
 	}
@@ -484,6 +492,7 @@ void IndoorSceneObject::deferred_update() {
 	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "enablePointLightShadow"), SceneManager::Instance()->renderFeature.pointLight.enableShadow);
 	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "enableAreaLight"), SceneManager::Instance()->renderFeature.areaLight.enableLight);
 	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "enableDefferedMap"), SceneManager::Instance()->renderFeature.deferredShading.enableDeferredMap);
+	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "enableVolumetricLight"), SceneManager::Instance()->renderFeature.postProcess.enableVolumetricLight);
 	
 	// deferred_map_type
 	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "deferred_map_type"), SceneManager::Instance()->renderFeature.deferredShading.current_item);
@@ -550,8 +559,6 @@ void IndoorSceneObject::post_process_update() {
 		}
 
 		// bloom effect pass
-		// glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		// glDrawBuffer(GL_BACK);
 		glBindFramebuffer(GL_FRAMEBUFFER, post_process_buffer.fbo);
 
 		m_bloomProgram->useProgram();
@@ -562,6 +569,24 @@ void IndoorSceneObject::post_process_update() {
 
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, pingpongBuffer[1]);
+
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	}
+
+	if (SceneManager::Instance()->renderFeature.postProcess.enableVolumetricLight) {
+		// Volumetric light pass
+		glBindFramebuffer(GL_FRAMEBUFFER, post_process_buffer.fbo);
+
+		m_volumetricProgram->useProgram();
+		glBindVertexArray(gbuffer.vao);
+
+		glUniform2f(glGetUniformLocation(m_volumetricProgram->programId(), "screen_light_pos"), screen_light_pos().x, screen_light_pos().y);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, post_process_buffer.scene);
+
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, post_process_buffer.bright_scene);
 
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	}

@@ -68,11 +68,12 @@ public:
 		struct {
 			bool enableFXAA = false;
 			bool enableBloomEffect = false;
+			bool enableVolumetricLight = false;
 		}postProcess;
 
 		bool enablePostProcess() {
 			return !deferredShading.enableDeferredMap &&
-				   ( postProcess.enableBloomEffect || postProcess.enableFXAA );
+				   ( postProcess.enableBloomEffect || postProcess.enableFXAA || postProcess.enableVolumetricLight);
 		}
 
 		struct {

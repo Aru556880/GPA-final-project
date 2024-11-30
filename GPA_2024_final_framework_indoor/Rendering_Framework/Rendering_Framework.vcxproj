@@ -71,6 +71,7 @@
     <None Include="src\shader\FXAA_fs.glsl" />
     <None Include="src\shader\geometry_fs.glsl" />
     <None Include="src\shader\geometry_vs.glsl" />
+    <None Include="src\shader\volumetric_fs.glsl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{ADA5FF44-3FBE-44D5-94ED-FFD82E3DF373}</ProjectGuid>

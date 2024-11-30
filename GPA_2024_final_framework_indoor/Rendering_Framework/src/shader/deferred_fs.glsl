@@ -27,6 +27,7 @@ uniform int enablePointLight;
 uniform int enablePointLightShadow;
 uniform int enableAreaLight;
 uniform int enableDefferedMap;
+uniform int enableVolumetricLight;
 
 
 // light in world space
@@ -66,6 +67,7 @@ void main(){
     if(modelType == 1.0){
         frag_color = vec4(0.3,0.3,0.3,1.0);
         bright_color = vec4(0.0, 0.0, 0.0, 1.0);
+        if(enableVolumetricLight == 1) bright_color = vec4(0.19, 0.19, 0.19, 1.0);
         return;
     }
     else if(modelType == -1.0){

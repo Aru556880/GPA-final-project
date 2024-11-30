@@ -37,6 +37,7 @@ void MyImGuiPanel::update() {
 		ImGui::SliderFloat3("Light Position", &(SceneManager::Instance()->renderFeature.blinnPhongLight.lightPos[0]), -5.0f, 5.0f);
 		ImGui::Checkbox("Enable Light", &SceneManager::Instance()->renderFeature.blinnPhongLight.enableLight);
 		ImGui::Checkbox("Enable Shadow", &SceneManager::Instance()->renderFeature.blinnPhongLight.enableShadow);
+		ImGui::Checkbox("Enable Volumetric Light", &SceneManager::Instance()->renderFeature.postProcess.enableVolumetricLight);
 	}
 	ImGui::PopID();
 
@@ -59,7 +60,7 @@ void MyImGuiPanel::update() {
 	ImGui::PushID(static_cast<int>(4));
 	if (ImGui::CollapsingHeader("Deferred Shading")) {
 		ImGui::Checkbox("Enable Deferred Map", &SceneManager::Instance()->renderFeature.deferredShading.enableDeferredMap);
-		if (ImGui::BeginCombo("Select Item", SceneManager::Instance()->renderFeature.deferredShading.items[SceneManager::Instance()->renderFeature.deferredShading.current_item])) {
+		if (ImGui::BeginCombo("Select Map", SceneManager::Instance()->renderFeature.deferredShading.items[SceneManager::Instance()->renderFeature.deferredShading.current_item])) {
 			for (int i = 0; i < 5; i++) {
 				bool is_selected = (SceneManager::Instance()->renderFeature.deferredShading.current_item == i);
 				if (ImGui::Selectable(SceneManager::Instance()->renderFeature.deferredShading.items[i], is_selected)) {
