@@ -26,14 +26,22 @@ void MyImGuiPanel::update() {
 	ImGui::Checkbox("Enable Normal Map", &SceneManager::Instance()->renderFeature.enableNormalMap);
 	
 	ImGui::PushID(static_cast<int>(0));
-	if (ImGui::CollapsingHeader("Blinn Phong Lighting")) {
-		ImGui::SliderFloat3("Light Position", &(SceneManager::Instance()->renderFeature.blinnPhongLight.lightPos[0]), -5.0f, 5.0f);
-		ImGui::Checkbox("Enable Light", &SceneManager::Instance()->renderFeature.blinnPhongLight.enableLight);
-		ImGui::Checkbox("Enable Shadow", &SceneManager::Instance()->renderFeature.blinnPhongLight.enableShadow);
+	if (ImGui::CollapsingHeader("Post Process")) {
+		ImGui::Checkbox("Enable FXAA", &SceneManager::Instance()->renderFeature.postProcess.enableFXAA);
+		ImGui::Checkbox("Enable Bloom Effect", &SceneManager::Instance()->renderFeature.postProcess.enableBloomEffect);
 	}
 	ImGui::PopID();
 
 	ImGui::PushID(static_cast<int>(1));
+	if (ImGui::CollapsingHeader("Blinn Phong Lighting")) {
+		ImGui::SliderFloat3("Light Position", &(SceneManager::Instance()->renderFeature.blinnPhongLight.lightPos[0]), -5.0f, 5.0f);
+		ImGui::Checkbox("Enable Light", &SceneManager::Instance()->renderFeature.blinnPhongLight.enableLight);
+		ImGui::Checkbox("Enable Shadow", &SceneManager::Instance()->renderFeature.blinnPhongLight.enableShadow);
+		ImGui::Checkbox("Enable Volumetric Light", &SceneManager::Instance()->renderFeature.postProcess.enableVolumetricLight);
+	}
+	ImGui::PopID();
+
+	ImGui::PushID(static_cast<int>(2));
 	if (ImGui::CollapsingHeader("Point Light")) {
 		ImGui::SliderFloat3("Light Position", &(SceneManager::Instance()->renderFeature.pointLight.lightPos[0]), -5.0f, 5.0f);
 		ImGui::Checkbox("Enable Light", &SceneManager::Instance()->renderFeature.pointLight.enableLight);
@@ -41,11 +49,29 @@ void MyImGuiPanel::update() {
 	}
 	ImGui::PopID();
 
-	ImGui::PushID(static_cast<int>(2));
+	ImGui::PushID(static_cast<int>(3));
 	if (ImGui::CollapsingHeader("Area Light")) {
 		ImGui::SliderFloat2("Rotation", &(SceneManager::Instance()->renderFeature.areaLight.lightRotate[0]), -5.0f, 5.0f);
 		ImGui::SliderFloat3("Light Position", &(SceneManager::Instance()->renderFeature.areaLight.lightPos[0]), -5.0f, 5.0f);
 		ImGui::Checkbox("Enable Light", &SceneManager::Instance()->renderFeature.areaLight.enableLight);
+	}
+	ImGui::PopID();
+
+	ImGui::PushID(static_cast<int>(4));
+	if (ImGui::CollapsingHeader("Deferred Shading")) {
+		ImGui::Checkbox("Enable Deferred Map", &SceneManager::Instance()->renderFeature.deferredShading.enableDeferredMap);
+		if (ImGui::BeginCombo("Select Map", SceneManager::Instance()->renderFeature.deferredShading.items[SceneManager::Instance()->renderFeature.deferredShading.current_item])) {
+			for (int i = 0; i < 5; i++) {
+				bool is_selected = (SceneManager::Instance()->renderFeature.deferredShading.current_item == i);
+				if (ImGui::Selectable(SceneManager::Instance()->renderFeature.deferredShading.items[i], is_selected)) {
+					SceneManager::Instance()->renderFeature.deferredShading.current_item = i;
+				}
+				if (is_selected) {
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
 	}
 	ImGui::PopID();
 }

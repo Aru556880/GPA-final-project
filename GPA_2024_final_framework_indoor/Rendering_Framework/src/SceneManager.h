@@ -66,6 +66,17 @@ public:
 		bool enableNormalMap = false;
 
 		struct {
+			bool enableFXAA = false;
+			bool enableBloomEffect = false;
+			bool enableVolumetricLight = false;
+		}postProcess;
+
+		bool enablePostProcess() {
+			return !deferredShading.enableDeferredMap &&
+				   ( postProcess.enableBloomEffect || postProcess.enableFXAA || postProcess.enableVolumetricLight);
+		}
+
+		struct {
 			bool enableLight = false;
 			bool enableShadow = false;
 			vec3 lightPos = vec3(-2.845f, 2.028f, -1.293f);
@@ -82,6 +93,12 @@ public:
 			vec2 lightRotate = vec2(0.0, 0.0);
 			vec3 lightPos = vec3(1.0f, 0.5f, -0.5f);
 		}areaLight;
+
+		struct {
+			bool enableDeferredMap = false;
+			const char* items[5] = { "world space vertex", "world space normal", "ambient color map", "diffuse color map", "specular color map" };
+			int current_item = 0;
+		}deferredShading;
 
 	}renderFeature;
 };

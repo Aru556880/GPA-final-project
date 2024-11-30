@@ -144,5 +144,9 @@
     <None Include="src\shader\cubedepth_fs.glsl" />
     <None Include="src\shader\cubedepth_vs.glsl" />
     <None Include="src\shader\cubedepth_gs.glsl" />
+    <None Include="src\shader\bloom_fs.glsl" />
+    <None Include="src\shader\blur_fs.glsl" />
+    <None Include="src\shader\FXAA_fs.glsl" />
+    <None Include="src\shader\volumetric_fs.glsl" />
   </ItemGroup>
 </Project>

@@ -26,9 +26,11 @@ private:
 
 	void deferred_update();
 	void shadowmap_update();
+	void post_process_update();
 
 	bool deferred_init();
 	bool shadowmap_init();
+	bool post_process_init();
 public:
 	
 
@@ -57,6 +59,12 @@ private:
 
 	ShaderProgram* m_blinnphongProgram;
 
+	// post-process programs
+	ShaderProgram* m_bloomProgram;
+	ShaderProgram* m_blurProgram;
+	ShaderProgram* m_fxaaProgram;
+	ShaderProgram* m_volumetricProgram;
+
 	// deferred program variables
 	struct
 	{
@@ -72,6 +80,26 @@ private:
 		GLuint depth_map;
 		GLuint vao;
 	} gbuffer;
+	// ===============================
+	// post-process program variables
+	struct
+	{
+		GLuint fbo;
+		GLuint scene;
+		GLuint bright_scene;
+	} post_process_buffer;
+	unsigned int pingpongFBO[2];
+	unsigned int pingpongBuffer[2];
+	vec2 screen_light_pos() {
+		vec4 clip_space_pos = m_projMat * m_viewMat * vec4(light_sphere.volumetricLightPos, 1.0);
+		vec3 ndc_space_pos = vec3(clip_space_pos) / clip_space_pos.w;
+
+		vec2 screen_light_pos;
+		screen_light_pos.x = 0.5f * (ndc_space_pos.x + 1.0f);
+		screen_light_pos.y = 0.5f * (ndc_space_pos.y + 1.0f);
+
+		return screen_light_pos;
+	}
 	// ===============================
 
 	// directional shadow mapping program variables
@@ -138,12 +166,25 @@ private:
 
 	struct {
 		vector<MyMesh> sphere_mesh;
-		mat4 model_mat() {
-			vec3 translate_vector = SceneManager::Instance()->renderFeature.pointLight.lightPos;
-			vec3 scale_vector = vec3(0.35);
+		vec3 pointLightPos;
+		vec3 volumetricLightPos;
+
+		mat4 model_mat(int lightType) { // 0: pointLight, 1: volumetricLight
+			pointLightPos = SceneManager::Instance()->renderFeature.pointLight.lightPos;
+			volumetricLightPos = SceneManager::Instance()->renderFeature.blinnPhongLight.lightPos * vec3(5, 2.5, 5);
+
+			vec3 translate_vector;
+			vec3 scale_vector = vec3(1.0);
+
+			if (lightType == 0) {
+				translate_vector = pointLightPos;
+				scale_vector = vec3(0.22);
+			}
+			else if (lightType == 1) translate_vector = volumetricLightPos;
+
 			mat4 matrix = translate(mat4(1.0f), translate_vector) * scale(mat4(1.0f), scale_vector);
 			return matrix;
 		}
-	}pointLight_sphere;
+	}light_sphere;
 };
 

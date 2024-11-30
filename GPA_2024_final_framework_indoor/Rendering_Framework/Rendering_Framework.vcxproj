@@ -59,6 +59,8 @@
   <ItemGroup>
     <None Include="src\shader\blinnphong_fs.glsl" />
     <None Include="src\shader\blinnphong_vs.glsl" />
+    <None Include="src\shader\bloom_fs.glsl" />
+    <None Include="src\shader\blur_fs.glsl" />
     <None Include="src\shader\cubedepth_fs.glsl" />
     <None Include="src\shader\cubedepth_gs.glsl" />
     <None Include="src\shader\cubedepth_vs.glsl" />
@@ -66,19 +68,21 @@
     <None Include="src\shader\deferred_vs.glsl" />
     <None Include="src\shader\depth_fs.glsl" />
     <None Include="src\shader\depth_vs.glsl" />
+    <None Include="src\shader\FXAA_fs.glsl" />
     <None Include="src\shader\geometry_fs.glsl" />
     <None Include="src\shader\geometry_vs.glsl" />
+    <None Include="src\shader\volumetric_fs.glsl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{ADA5FF44-3FBE-44D5-94ED-FFD82E3DF373}</ProjectGuid>
     <RootNamespace>Rendering_Framework</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.22621.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -125,11 +129,16 @@
     <IncludePath>$(SolutionDir)\externals\include;$(SolutionDir);$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)\externals\libs;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IncludePath>$(SolutionDir)\externals\include;$(SolutionDir);$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)\externals\libs;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
