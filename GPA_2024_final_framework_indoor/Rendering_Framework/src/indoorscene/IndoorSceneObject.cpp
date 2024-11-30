@@ -378,7 +378,7 @@ void IndoorSceneObject::deferred_update() {
 	glDrawBuffers(7, draw_buffers);
 	
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glClearColor(0.2,0.2,0.2, 1.0);
+	glClearColor(0.19, 0.19, 0.19, 1.0);
 	m_geometryProgram->useProgram();
 
 	glUniformMatrix4fv(SceneManager::Instance()->m_projMatHandle, 1, false, glm::value_ptr(this->m_projMat));

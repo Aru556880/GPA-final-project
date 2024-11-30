@@ -10,7 +10,7 @@ in VS_OUT
 	vec2 texcoord;                                                       
 }fs_in;      
 
-float exposure = 0.5f;
+float exposure = 0.3f;
 
 void main(){
 
@@ -24,6 +24,4 @@ void main(){
     result = pow(result, vec3(1.0 / gamma));
 
     frag_color = vec4(result, 1.0);
-
-    //frag_color = vec4(texture(bloomBlur, fs_in.texcoord).rgb, 1.0);
 }

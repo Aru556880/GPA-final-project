@@ -65,6 +65,7 @@ void main(){
 
     if(modelType == 1.0){
         frag_color = vec4(0.3,0.3,0.3,1.0);
+        bright_color = vec4(0.0, 0.0, 0.0, 1.0);
         return;
     }
     else if(modelType == -1.0){
@@ -143,9 +144,8 @@ void main(){
 
     frag_color = vec4(final_color, 1.0);
     float brightness = dot(frag_color.rgb, vec3(0.2126, 0.7152, 0.0722));
-    if(brightness > 0.8)
+    if(brightness > 1.0)
         bright_color = vec4(frag_color.rgb, 1.0);
-        //bright_color = vec4(1.0);
     else
         bright_color = vec4(0.0, 0.0, 0.0, 1.0);
 }
