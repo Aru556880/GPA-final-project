@@ -12,12 +12,24 @@ layout (binding = 5) uniform sampler2D tangent_map;    // tangent is in view spa
 
 layout(binding = 6) uniform sampler2D normalTexture_map; // normal mapping texture
 layout (binding = 7) uniform sampler2DShadow dirLightShadow_map;
-layout (binding = 8) uniform samplerCube  pointLightShadow_map;
+layout (binding = 8) uniform samplerCube pointLightShadow_map;
+layout (binding = 9) uniform sampler2D depth_map;
+layout (binding = 10) uniform sampler2D noise_map;
 
 layout(location = 1) uniform mat4 viewMat ;
+layout(location = 2) uniform mat4 projMat ;
 layout(location = 3) uniform mat4 shadow_matrix;
 layout(location = 18) uniform float far_plane;
 layout(location = 21) uniform int deferred_map_type;
+
+layout(std140, binding = 0) uniform SSAOKernals
+{
+    vec3 kernals[64];
+};
+
+uniform vec2 noiseScale;
+uniform mat4 invproj;
+
 
 // features enable/disable
 uniform int enableNormalMap;
@@ -28,6 +40,7 @@ uniform int enablePointLightShadow;
 uniform int enableAreaLight;
 uniform int enableDefferedMap;
 uniform int enableVolumetricLight;
+uniform int enableSSAO;
 
 
 // light in world space
@@ -57,6 +70,7 @@ float DirLightShadow(vec3 fragPos);
 float PointLightShadow(vec3 fragPos);
 vec3 AreaLightColor(vec4 view_position, vec3 normal, vec3 viewDir, vec3 diffuseFactor);
 vec3 CalculatePlaneIntersection(vec3 viewPosition, vec3 reflectionVector, vec3 lightDirection, vec3 rectangleLightCenter);
+vec4 SSAOColor();
 
 void main(){
     // see comment in geometry_fs for modelType id
@@ -85,6 +99,8 @@ void main(){
 	vec3 world_normal = texture(normal_map, fs_in.texcoord).rgb;  
     vec3 world_tangent = texture(tangent_map, fs_in.texcoord).rgb; // normalized mv tangent
     vec3 normal_tex = texture(normalTexture_map, fs_in.texcoord).rgb;  
+
+    float depth = texture(depth_map, fs_in.texcoord).r;
 
 	Ka = texture(ambient_map, fs_in.texcoord).rgb;
 	Kd = texture(diffuse_map, fs_in.texcoord).rgb;
@@ -150,6 +166,11 @@ void main(){
         bright_color = vec4(frag_color.rgb, 1.0);
     else
         bright_color = vec4(0.0, 0.0, 0.0, 1.0);
+
+    if(enableSSAO > 0)
+        frag_color = SSAOColor() * vec4(final_color, 1.0);
+    else
+        frag_color = vec4(final_color, 1.0);
 }
 
 vec3 BlinnPhongLightColor(vec3 worldLightPos, vec3 viewNormal, vec3 viewFragPosition, bool useNormalMap) {
@@ -318,4 +339,37 @@ vec3 AreaLightColor(vec4 view_position, vec3 normal, vec3 viewDir, vec3 diffuseF
 vec3 CalculatePlaneIntersection(vec3 viewPosition, vec3 reflectionVector, vec3 lightDirection, vec3 rectangleLightCenter)
 {
    return viewPosition + reflectionVector * (dot(lightDirection,rectangleLightCenter-viewPosition)/dot(lightDirection,reflectionVector));
+}
+
+vec4 SSAOColor(){
+    float depth = texture(depth_map, fs_in.texcoord).r;                                         
+	if(depth >= 1.0) { discard; }                                                                                                                            
+	vec4 position = invproj * vec4(vec3(fs_in.texcoord, depth) * 2.0 - 1.0, 1.0);               
+	position /= position.w;                                                                     
+	vec3 N = mat3(viewMat) * texture(normal_map, fs_in.texcoord).xyz;   
+    N = normalize(N);
+
+	vec3 randvec = normalize(texture(noise_map, fs_in.texcoord * noiseScale).xyz * 2.0 - 1.0); 
+	vec3 T = normalize(randvec - N * dot(randvec, N));                                          
+	vec3 B = cross(N, T);                                                                       
+	mat3 tbn = mat3(T, B, N); // tangent to eye matrix                                          
+	const float radius = 1.0;                                                                   
+	float ao = 0.0;                                                                             
+	for(int i = 0; i < 64; ++i)                                                                 
+	{                                                                                           
+	    vec4 sampleEye = position + vec4(tbn * kernals[i].xyz * radius, 0.0);                   
+	    vec4 sampleP = projMat * sampleEye;                                                        
+	    sampleP /= sampleP.w;                                                                   
+	    sampleP = sampleP * 0.5 + 0.5;                                                          
+	    float sampleDepth = texture(depth_map, sampleP.xy).r;                                   
+	    vec4 invP = invproj * vec4(vec3(sampleP.xy, sampleDepth) * 2.0 - 1.0, 1.0);             
+	    invP /= invP.w;         
+        float bias = 0.005;
+	    if(sampleDepth + bias  > sampleP.z || length(invP - position) > radius)                         
+	    {                                                                                       
+	        ao += 1.0;                                                                          
+	    }                                                                                       
+	}         
+
+	return vec4(vec3(ao / 64.0), 1.0); 
 }

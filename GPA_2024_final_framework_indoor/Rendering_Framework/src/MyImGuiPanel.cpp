@@ -29,6 +29,7 @@ void MyImGuiPanel::update() {
 	if (ImGui::CollapsingHeader("Post Process")) {
 		ImGui::Checkbox("Enable FXAA", &SceneManager::Instance()->renderFeature.postProcess.enableFXAA);
 		ImGui::Checkbox("Enable Bloom Effect", &SceneManager::Instance()->renderFeature.postProcess.enableBloomEffect);
+		ImGui::Checkbox("Enable SSAO", &SceneManager::Instance()->renderFeature.postProcess.enableSSAO);
 	}
 	ImGui::PopID();
 

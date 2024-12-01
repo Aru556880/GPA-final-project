@@ -31,6 +31,7 @@ private:
 	bool deferred_init();
 	bool shadowmap_init();
 	bool post_process_init();
+	bool ssao_init();
 public:
 	
 
@@ -193,5 +194,10 @@ private:
 			return matrix;
 		}
 	}light_sphere;
+
+	struct {
+		GLuint uboSSAOKernal;
+		GLuint noiseMap;
+	}ssao;
 };
 

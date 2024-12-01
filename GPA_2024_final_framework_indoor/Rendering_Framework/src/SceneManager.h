@@ -64,11 +64,11 @@ public:
 
 	struct {
 		bool enableNormalMap = false;
-
 		struct {
 			bool enableFXAA = false;
 			bool enableBloomEffect = false;
 			bool enableVolumetricLight = false;
+			bool enableSSAO = false;
 		}postProcess;
 
 		bool enablePostProcess() {

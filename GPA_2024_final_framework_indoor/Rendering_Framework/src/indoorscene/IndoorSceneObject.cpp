@@ -37,6 +37,7 @@ bool IndoorSceneObject::init() {
 	flag &= deferred_init();
 	flag &= shadowmap_init();
 	flag &= post_process_init();
+	flag &= ssao_init();
 
 	// load wood table meshes and other meshes separately
 	LoadMeshModel(this->m_triceMeshes, trice_filepath, 0, 1);
@@ -49,20 +50,6 @@ bool IndoorSceneObject::init() {
 	areaLight_rect.height = 1.0f;
 	areaLight_rect.width = 1.0f;
 	areaLight_rect.color = vec3(0.8f, 0.6f, 0.0f);
-	/*
-	float area_light_data[18] = {
-		areaLight_rect.center.x + areaLight_rect.width * 0.5f , areaLight_rect.center.y + areaLight_rect.height * 0.5f, areaLight_rect.center.z,
-
-		areaLight_rect.center.x - areaLight_rect.width * 0.5f, areaLight_rect.center.y + areaLight_rect.height * 0.5f, areaLight_rect.center.z,
-
-		areaLight_rect.center.x - areaLight_rect.width * 0.5f, areaLight_rect.center.y - areaLight_rect.height * 0.5, areaLight_rect.center.z,
-
-		areaLight_rect.center.x + areaLight_rect.width * 0.5f, areaLight_rect.center.y + areaLight_rect.height * 0.5f, areaLight_rect.center.z,
-
-		areaLight_rect.center.x + areaLight_rect.width * 0.5f, areaLight_rect.center.y - areaLight_rect.height * 0.5, areaLight_rect.center.z,
-
-		areaLight_rect.center.x - areaLight_rect.width * 0.5f, areaLight_rect.center.y - areaLight_rect.height * 0.5, areaLight_rect.center.z,
-	};*/
 
 	glGenVertexArrays(1, &areaLight_rect.vao);
 	glBindVertexArray(areaLight_rect.vao);
@@ -154,6 +141,45 @@ bool IndoorSceneObject::deferred_init(){
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	return flag;
+}
+
+bool IndoorSceneObject::ssao_init() {
+	glGenBuffers(1, &ssao.uboSSAOKernal);
+	glBindBuffer(GL_UNIFORM_BUFFER, ssao.uboSSAOKernal);
+	vec4 kernals[64];
+	srand(time(NULL));
+	for (int i = 0; i < 64; ++i)
+	{
+		float scale = i / 64.0;
+		scale = 0.1f + 0.9f * scale * scale;
+		kernals[i] = vec4(normalize(vec3(
+			rand() / (float)RAND_MAX * 2.0f - 1.0f,
+			rand() / (float)RAND_MAX * 2.0f - 1.0f,
+			rand() / (float)RAND_MAX * 0.85f + 0.15f)) * scale,
+			0.0f
+		);
+	}
+	glBufferData(GL_UNIFORM_BUFFER, 64 * sizeof(vec4), &kernals[0][0], GL_STATIC_DRAW);
+
+	glGenTextures(1, &ssao.noiseMap);
+	glBindTexture(GL_TEXTURE_2D, ssao.noiseMap);
+	vec3 noiseData[16];
+	for (int i = 0; i < 16; ++i)
+	{
+		noiseData[i] = normalize(vec3(
+			rand() / (float)RAND_MAX * 2.0 - 1.0, // -1.0 ~ 1.0
+			rand() / (float)RAND_MAX * 2.0 - 1.0, // -1.0 ~ 1.0
+			0.0f
+		));
+	}
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, 4, 4, 0, GL_RGB, GL_FLOAT,
+		&noiseData[0][0]);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	return true;
 }
 
 bool IndoorSceneObject::shadowmap_init()
@@ -482,6 +508,7 @@ void IndoorSceneObject::deferred_update() {
 
 	// matrix
 	glUniformMatrix4fv(SceneManager::Instance()->m_viewMatHandle, 1, false, glm::value_ptr(this->m_viewMat));
+	glUniformMatrix4fv(SceneManager::Instance()->m_projMatHandle, 1, false, glm::value_ptr(this->m_projMat));
 	glUniformMatrix4fv(SceneManager::Instance()->m_shadowMatHandle, 1, false, glm::value_ptr(this->m_shadow_sbpv_matrix));
 
 	// features enable/disable
@@ -493,6 +520,7 @@ void IndoorSceneObject::deferred_update() {
 	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "enableAreaLight"), SceneManager::Instance()->renderFeature.areaLight.enableLight);
 	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "enableDefferedMap"), SceneManager::Instance()->renderFeature.deferredShading.enableDeferredMap);
 	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "enableVolumetricLight"), SceneManager::Instance()->renderFeature.postProcess.enableVolumetricLight);
+	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "enableSSAO"), SceneManager::Instance()->renderFeature.postProcess.enableSSAO);
 	
 	// deferred_map_type
 	glUniform1i(glGetUniformLocation(m_deferredProgram->programId(), "deferred_map_type"), SceneManager::Instance()->renderFeature.deferredShading.current_item);
@@ -533,6 +561,16 @@ void IndoorSceneObject::deferred_update() {
 	glActiveTexture(GL_TEXTURE8);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, pointLight_shadowmap.depth_cubeMap);
 
+	glActiveTexture(GL_TEXTURE9);
+	glBindTexture(GL_TEXTURE_2D, gbuffer.depth_map);
+
+	glActiveTexture(GL_TEXTURE10);
+	glBindTexture(GL_TEXTURE_2D, ssao.noiseMap);
+
+	glBindBufferBase(GL_UNIFORM_BUFFER, 0, ssao.uboSSAOKernal);
+	glUniform2f(glGetUniformLocation(m_deferredProgram->programId(), "noiseScale"), m_window_width / 4.0, m_window_height / 4.0);
+	glUniformMatrix4fv(glGetUniformLocation(m_deferredProgram->programId(), "invproj"),1, GL_FALSE, value_ptr(inverse(m_projMat)) );
+	
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 
