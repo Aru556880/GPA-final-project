@@ -64,14 +64,20 @@ void MyCameraManager::keyPress(const RenderWidgetKeyCode key) {
 		this->m_DPressedFlag = true;
 	}
 	else if (key == RenderWidgetKeyCode::KEY_Z) {
-		this->m_playerCameraHeightOffset = 0.025;
+		this->m_playerCameraHeightOffset = 0.02;
 	}
 	else if (key == RenderWidgetKeyCode::KEY_X) {
-		this->m_playerCameraHeightOffset = -0.025;
+		this->m_playerCameraHeightOffset = -0.02;
 	}	
 	else if (key == RenderWidgetKeyCode::KEY_T) {
 		SceneManager::Instance()->m_test_meshcount += 1;
 		cout << "test" << SceneManager::Instance()->m_test_meshcount << endl;
+	}
+	else if(key == RenderWidgetKeyCode::KEY_RIGHT){ 
+		this->m_RIGHTPressedFlag = true;
+	}
+	else if (key == RenderWidgetKeyCode::KEY_LEFT) {
+		this->m_LEFTPressedFlag = true;
 	}
 }
 void MyCameraManager::keyRelease(const RenderWidgetKeyCode key) {
@@ -86,6 +92,12 @@ void MyCameraManager::keyRelease(const RenderWidgetKeyCode key) {
 	}
 	else if (key == RenderWidgetKeyCode::KEY_D) {
 		this->m_DPressedFlag = false;
+	}
+	else if (key == RenderWidgetKeyCode::KEY_RIGHT) {
+		this->m_RIGHTPressedFlag = false;
+	}
+	else if (key == RenderWidgetKeyCode::KEY_LEFT) {
+		this->m_LEFTPressedFlag = false;
 	}
 
 	if (key == RenderWidgetKeyCode::KEY_Z || key == RenderWidgetKeyCode::KEY_X) {
@@ -112,6 +124,16 @@ void MyCameraManager::updatePlayerCamera() {
 	}
 	else if (this->m_DPressedFlag) {
 		this->m_playerMyCamera->rotateLookCenterAccordingToViewOrg(-0.01);
+	}
+	else if (this->m_RIGHTPressedFlag) {
+		glm::vec3 before = this->m_playerMyCamera->lookCenter();
+		this->m_playerMyCamera->forward(glm::vec3(1.0, 0.0, 0.0) * this->m_playerCameraForwardSpeed, true);
+		glm::vec3 after = this->m_playerMyCamera->lookCenter();
+	}
+	else if (this->m_LEFTPressedFlag) {
+		glm::vec3 before = this->m_playerMyCamera->lookCenter();
+		this->m_playerMyCamera->forward(glm::vec3(-1.0, 0.0, 0.0) * this->m_playerCameraForwardSpeed, true);
+		glm::vec3 after = this->m_playerMyCamera->lookCenter();
 	}
 
 	this->m_playerMyCamera->translateLookCenterAndViewOrg(glm::vec3(0.0, this->m_playerCameraHeightOffset, 0.0));

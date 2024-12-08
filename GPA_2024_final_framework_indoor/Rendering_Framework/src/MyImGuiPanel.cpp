@@ -21,8 +21,8 @@ void MyImGuiPanel::update() {
 	const std::string FT_STR = "Frame: " + std::to_string(this->m_avgFrameTime);
 	ImGui::TextColored(ImVec4(0, 220, 0, 255), FT_STR.c_str());
 
-	ImGui::SliderFloat3("Eye Position", &(m_cameraManager->playerViewOrig_ref()->x), -5.0, 5.0);
-	ImGui::SliderFloat3("Look Center", &(m_cameraManager->playerCameraLookCenter_ref()->x), -5.0, 5.0);
+	ImGui::InputFloat3("Eye Position", &(m_cameraManager->playerViewOrig_ref()->x));
+	ImGui::InputFloat3("Look Center", &(m_cameraManager->playerCameraLookCenter_ref()->x));
 	ImGui::Checkbox("Enable Normal Map", &SceneManager::Instance()->renderFeature.enableNormalMap);
 	
 	ImGui::PushID(static_cast<int>(0));

@@ -238,6 +238,8 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 	else if (key == GLFW_KEY_T) { setKeyStatus(RenderWidgetKeyCode::KEY_T, action); }
 	else if (key == GLFW_KEY_Z) { setKeyStatus(RenderWidgetKeyCode::KEY_Z, action); }
 	else if (key == GLFW_KEY_X) { setKeyStatus(RenderWidgetKeyCode::KEY_X, action); }
+	else if (key == GLFW_KEY_RIGHT) { setKeyStatus(RenderWidgetKeyCode::KEY_RIGHT, action); }
+	else if (key == GLFW_KEY_LEFT) { setKeyStatus(RenderWidgetKeyCode::KEY_LEFT, action); }
 }
 void mouseScrollCallback(GLFWwindow *window, double xoffset, double yoffset) {}
 

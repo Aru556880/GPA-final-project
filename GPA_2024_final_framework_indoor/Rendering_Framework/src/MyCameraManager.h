@@ -3,7 +3,7 @@
 #include "camera\MyOrbitControl.h"
 
 enum class RenderWidgetKeyCode {
-	KEY_W, KEY_A, KEY_S, KEY_D, KEY_T, KEY_Z, KEY_X
+	KEY_W, KEY_A, KEY_S, KEY_D, KEY_T, KEY_Z, KEY_X, KEY_LEFT, KEY_RIGHT
 };
 enum class RenderWidgetMouseButton {
 	M_LEFT, M_RIGHT, M_MIDDLE
@@ -74,7 +74,8 @@ private:
 	bool m_APressedFlag = false;
 	bool m_SPressedFlag = false;
 	bool m_DPressedFlag = false;
-
+	bool m_LEFTPressedFlag = false;
+	bool m_RIGHTPressedFlag = false;
 };
 
 

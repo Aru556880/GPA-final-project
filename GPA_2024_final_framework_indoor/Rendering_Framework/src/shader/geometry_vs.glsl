@@ -24,7 +24,7 @@ void main(){
 		
 	mat4 mv_matrix = viewMat * modelMat;	        
 	gl_Position = projMat * mv_matrix * P;	                    
-	vs_out.position = (modelMat* P).xyz;	            
+	vs_out.position = (modelMat * P).xyz;	            
 	vs_out.normal = normalize(mat3(modelMat) * normal);	
 	vs_out.tangent = normalize(mat3(viewMat * modelMat) * tangent);
 	vs_out.texcoord = texcoord;	  
